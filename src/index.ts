@@ -8,11 +8,12 @@ const app = express();
 
 app.use((req, res, next) => {
   const allowedHeaders = "Content-Type, Authorization, x-user-id";
-  const configuredOrigin = env.MINT_SITE_URL.replace(/\/$/, "");
   const requestOrigin = req.headers.origin?.replace(/\/$/, "");
-  const allowedOrigin = requestOrigin === configuredOrigin ? requestOrigin : configuredOrigin;
+  const allowedOrigins = [env.MINT_SITE_URL, env.SIM_SITE_URL].map((origin) => origin.replace(/\/$/, ""));
 
-  res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+  }
 
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");

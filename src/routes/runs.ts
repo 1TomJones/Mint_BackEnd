@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { ZodError } from "zod";
-import { createRun, createRunSchema, submitRunResult, submitRunSchema } from "../services/runService";
+import { ZodError, z } from "zod";
+import { createRun, createRunSchema, getRunDetail, submitRunResult, submitRunSchema } from "../services/runService";
 import { HttpError } from "../types/errors";
 
 export const runsRouter = Router();
@@ -19,8 +19,6 @@ runsRouter.post("/create", async (req, res, next) => {
       res.type("application/json");
       return res.status(400).json({ error: "Missing eventCode" });
     }
-
-    console.log("eventCode", eventCode, "userId", userId);
 
     const payload = createRunSchema.parse({ eventCode, userId });
     const result = await createRun(payload);
@@ -50,6 +48,17 @@ runsRouter.post("/submit", async (req, res, next) => {
     const payload = submitRunSchema.parse(req.body);
     const result = await submitRunResult(payload);
     return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+runsRouter.get("/:runId", async (req, res, next) => {
+  try {
+    const schema = z.object({ runId: z.string().uuid() });
+    const { runId } = schema.parse(req.params);
+    const runDetail = await getRunDetail(runId);
+    return res.status(200).json(runDetail);
   } catch (error) {
     return next(error);
   }

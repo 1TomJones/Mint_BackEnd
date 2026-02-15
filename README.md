@@ -27,7 +27,8 @@ Set these on Render (and locally in `.env` for development):
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY` (server-only secret)
-- `MINT_SITE_URL` (allowed CORS origin, e.g. `https://mint.example.com`)
+- `MINT_SITE_URL` (allowed CORS origin for Mint frontend, e.g. `https://mint.example.com`)
+- `SIM_SITE_URL` (allowed CORS origin for simulation frontend, e.g. `https://sim.example.com`)
 - `PORT` (optional, defaults to `3000`)
 
 > Never expose `SUPABASE_SERVICE_ROLE_KEY` to the frontend.
@@ -61,6 +62,7 @@ npm start
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `MINT_SITE_URL`
+   - `SIM_SITE_URL`
    - optionally `PORT`
 
 ## Suggested table expectations
