@@ -7,6 +7,7 @@ import { runsRouter } from "./routes/runs";
 const app = express();
 
 app.use((req, res, next) => {
+  const allowedHeaders = "Content-Type, Authorization, x-user-id";
   const configuredOrigin = env.MINT_SITE_URL.replace(/\/$/, "");
   const requestOrigin = req.headers.origin?.replace(/\/$/, "");
   const allowedOrigin = requestOrigin === configuredOrigin ? requestOrigin : configuredOrigin;
@@ -15,7 +16,7 @@ app.use((req, res, next) => {
 
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", allowedHeaders);
 
   if (req.method === "OPTIONS") {
     return res.status(204).end();
