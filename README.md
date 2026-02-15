@@ -8,6 +8,7 @@ Minimal TypeScript/Node.js service that bridges:
 ## Features
 
 - `POST /api/runs/create`
+  - Requires header `x-user-id` (exact header name) for MVP user identity.
   - Validates event by code.
   - Creates a run for a user.
   - Returns a simulation URL with `run_id` query param.
