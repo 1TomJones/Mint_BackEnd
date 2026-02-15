@@ -10,5 +10,7 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: MINT_SITE_URL
+        sync: false
       - key: NODE_ENV
         value: production
