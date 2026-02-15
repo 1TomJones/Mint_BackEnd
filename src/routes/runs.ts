@@ -7,7 +7,22 @@ export const runsRouter = Router();
 
 runsRouter.post("/create", async (req, res, next) => {
   try {
-    const payload = createRunSchema.parse(req.body);
+    const userId = req.headers["x-user-id"] as string | undefined;
+    const eventCode = req.body?.eventCode as string | undefined;
+
+    if (!userId) {
+      res.type("application/json");
+      return res.status(401).json({ error: "Missing x-user-id" });
+    }
+
+    if (!eventCode) {
+      res.type("application/json");
+      return res.status(400).json({ error: "Missing eventCode" });
+    }
+
+    console.log("eventCode", eventCode, "userId", userId);
+
+    const payload = createRunSchema.parse({ eventCode, userId });
     const result = await createRun(payload);
     res.type("application/json");
     return res.status(201).json(result);

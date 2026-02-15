@@ -3,7 +3,8 @@ import { supabase } from "../lib/supabase";
 import { HttpError } from "../types/errors";
 
 export const createRunSchema = z.object({
-  eventCode: z.string().min(1)
+  eventCode: z.string().min(1),
+  userId: z.string().min(1)
 });
 
 export const submitRunSchema = z.object({
@@ -38,7 +39,8 @@ export async function createRun(input: z.infer<typeof createRunSchema>) {
   const { data: run, error: runError } = await supabase
     .from("runs")
     .insert({
-      event_id: event.id
+      event_id: event.id,
+      user_id: input.userId
     })
     .select("id")
     .single();
@@ -46,6 +48,7 @@ export async function createRun(input: z.infer<typeof createRunSchema>) {
   if (runError || !run) {
     console.error("Failed to create run", {
       eventId: event.id,
+      userId: input.userId,
       error: runError?.message ?? "unknown error"
     });
     throw new HttpError(500, `Failed to create run: ${runError?.message ?? "unknown error"}`);
