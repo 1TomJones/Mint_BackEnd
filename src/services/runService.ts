@@ -10,11 +10,11 @@ export const createRunSchema = z.object({
 export const submitRunSchema = z.object({
   runId: z.string().uuid(),
   score: z.number(),
-  pnl: z.number(),
-  sharpe: z.number(),
-  max_drawdown: z.number(),
-  win_rate: z.number(),
-  extra: z.record(z.unknown()).default({})
+  pnl: z.number().nullable().optional().default(null),
+  sharpe: z.number().nullable().optional().default(null),
+  max_drawdown: z.number().nullable().optional().default(null),
+  win_rate: z.number().nullable().optional().default(null),
+  extra: z.record(z.unknown()).nullable().optional().default(null)
 });
 
 export async function createRun(input: z.infer<typeof createRunSchema>) {
@@ -68,11 +68,12 @@ export async function submitRunResult(input: z.infer<typeof submitRunSchema>) {
     .maybeSingle();
 
   if (runError) {
-    console.error("Failed to load run", { runId: input.runId, error: runError.message });
+    console.error("Submit run attempt", { runId: input.runId, duplicate: false, status: 500, reason: runError.message });
     throw new HttpError(500, `Failed to load run: ${runError.message}`);
   }
 
   if (!run) {
+    console.log("Submit run attempt", { runId: input.runId, duplicate: false, status: 404 });
     throw new HttpError(404, "Run not found");
   }
 
@@ -83,15 +84,18 @@ export async function submitRunResult(input: z.infer<typeof submitRunSchema>) {
     .maybeSingle();
 
   if (existingError) {
-    console.error("Failed to verify existing results", {
+    console.error("Submit run attempt", {
       runId: input.runId,
-      error: existingError.message
+      duplicate: false,
+      status: 500,
+      reason: existingError.message
     });
     throw new HttpError(500, `Failed to verify existing results: ${existingError.message}`);
   }
 
   if (existingResult || run.finished_at) {
-    throw new HttpError(409, "Run results already submitted");
+    console.log("Submit run attempt", { runId: input.runId, duplicate: true, status: 409 });
+    throw new HttpError(409, "Already submitted");
   }
 
   const { error: insertError } = await supabase.from("run_results").insert({
@@ -105,7 +109,7 @@ export async function submitRunResult(input: z.infer<typeof submitRunSchema>) {
   });
 
   if (insertError) {
-    console.error("Failed to save run result", { runId: input.runId, error: insertError.message });
+    console.error("Submit run attempt", { runId: input.runId, duplicate: false, status: 500, reason: insertError.message });
     throw new HttpError(500, `Failed to save run result: ${insertError.message}`);
   }
 
@@ -115,9 +119,52 @@ export async function submitRunResult(input: z.infer<typeof submitRunSchema>) {
     .eq("id", input.runId);
 
   if (updateError) {
-    console.error("Failed to mark run as finished", { runId: input.runId, error: updateError.message });
+    console.error("Submit run attempt", { runId: input.runId, duplicate: false, status: 500, reason: updateError.message });
     throw new HttpError(500, `Failed to mark run as finished: ${updateError.message}`);
   }
 
-  return { success: true };
+  console.log("Submit run attempt", { runId: input.runId, duplicate: false, status: 200 });
+  return { ok: true };
+}
+
+export async function getRunDetail(runId: string) {
+  const { data: run, error: runError } = await supabase
+    .from("runs")
+    .select("id, event_id, user_id, created_at, finished_at")
+    .eq("id", runId)
+    .maybeSingle();
+
+  if (runError) {
+    throw new HttpError(500, `Failed to fetch run: ${runError.message}`);
+  }
+
+  if (!run) {
+    throw new HttpError(404, "Run not found");
+  }
+
+  const { data: event, error: eventError } = await supabase
+    .from("events")
+    .select("id, code, sim_url")
+    .eq("id", run.event_id)
+    .maybeSingle();
+
+  if (eventError) {
+    throw new HttpError(500, `Failed to fetch event: ${eventError.message}`);
+  }
+
+  const { data: result, error: resultError } = await supabase
+    .from("run_results")
+    .select("run_id, created_at, score, pnl, sharpe, max_drawdown, win_rate, extra")
+    .eq("run_id", run.id)
+    .maybeSingle();
+
+  if (resultError) {
+    throw new HttpError(500, `Failed to fetch run result: ${resultError.message}`);
+  }
+
+  return {
+    run,
+    event,
+    result: result ?? null
+  };
 }

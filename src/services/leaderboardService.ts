@@ -3,33 +3,9 @@ import { HttpError } from "../types/errors";
 
 const DEFAULT_LIMIT = 50;
 
-function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
-  if (!local || !domain) return "anonymous";
-
-  if (local.length <= 2) {
-    return `${local[0] ?? "*"}***@${domain}`;
-  }
-
-  return `${local.slice(0, 2)}***@${domain}`;
-}
-
-async function resolveDisplayName(userId: string): Promise<string> {
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
-
-  if (error || !data.user) {
-    return "anonymous";
-  }
-
-  const metadataDisplayName = data.user.user_metadata?.display_name;
-  if (typeof metadataDisplayName === "string" && metadataDisplayName.trim().length > 0) {
-    return metadataDisplayName;
-  }
-
-  return data.user.email ? maskEmail(data.user.email) : "anonymous";
-}
-
 export async function getLeaderboard(eventCode: string, limit: number = DEFAULT_LIMIT) {
+  const safeLimit = Math.min(limit, DEFAULT_LIMIT);
+
   const { data: event, error: eventError } = await supabase
     .from("events")
     .select("id, code")
@@ -46,32 +22,62 @@ export async function getLeaderboard(eventCode: string, limit: number = DEFAULT_
 
   const { data: rows, error: rowsError } = await supabase
     .from("run_results")
-    .select("score, pnl, run:run_id!inner(user_id, event_id)")
+    .select(
+      "run_id, created_at, score, pnl, sharpe, max_drawdown, win_rate, run:run_id!inner(user_id, event_id)"
+    )
     .eq("run.event_id", event.id)
     .order("score", { ascending: false })
     .order("pnl", { ascending: false })
-    .limit(limit);
+    .limit(safeLimit);
 
   if (rowsError) {
     throw new HttpError(500, `Failed to fetch leaderboard: ${rowsError.message}`);
   }
 
-  const leaderboard = await Promise.all(
-    (rows ?? []).map(async (row, index) => {
-      const run = Array.isArray(row.run) ? row.run[0] : row.run;
-      const displayName = run?.user_id ? await resolveDisplayName(run.user_id) : "anonymous";
-
-      return {
-        rank: index + 1,
-        displayName,
-        score: row.score,
-        pnl: row.pnl
-      };
-    })
+  const userIds = Array.from(
+    new Set(
+      (rows ?? [])
+        .map((row) => {
+          const run = (Array.isArray((row as any).run) ? (row as any).run[0] : (row as any).run) as { user_id?: string } | null;
+          return run?.user_id;
+        })
+        .filter((value): value is string => Boolean(value))
+    )
   );
+
+  const displayNameByUserId = new Map<string, string>();
+  if (userIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", userIds);
+
+    if (!profilesError) {
+      for (const profile of profiles ?? []) {
+        if (profile.id && profile.display_name) {
+          displayNameByUserId.set(profile.id, profile.display_name);
+        }
+      }
+    }
+  }
 
   return {
     eventCode: event.code,
-    leaderboard
+    leaderboard: (rows ?? []).map((row) => {
+      const run = (Array.isArray((row as any).run) ? (row as any).run[0] : (row as any).run) as { user_id?: string } | null;
+      const userId = run?.user_id ?? null;
+
+      return {
+        runId: row.run_id,
+        userId,
+        display_name: userId ? displayNameByUserId.get(userId) ?? null : null,
+        created_at: row.created_at,
+        score: row.score,
+        pnl: row.pnl,
+        sharpe: row.sharpe,
+        max_drawdown: row.max_drawdown,
+        win_rate: row.win_rate
+      };
+    })
   };
 }

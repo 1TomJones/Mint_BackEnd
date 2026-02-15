@@ -7,7 +7,7 @@ const paramsSchema = z.object({
 });
 
 const querySchema = z.object({
-  limit: z.coerce.number().int().positive().max(200).optional()
+  limit: z.coerce.number().int().positive().max(50).optional()
 });
 
 export const eventsRouter = Router();
