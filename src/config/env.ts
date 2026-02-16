@@ -8,8 +8,12 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   MINT_SITE_URL: z.string().url(),
   SIM_SITE_URL: z.string().url(),
+  MINT_ADMIN_ORIGIN: z.string().url().optional(),
+  SIM_ORIGIN: z.string().url().optional(),
   SUPABASE_URL: z.string().url(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1)
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  ADMIN_JWT_SECRET: z.string().min(32),
+  ADMIN_EMAIL_ALLOWLIST: z.string().optional()
 });
 
 const parsed = envSchema.safeParse(process.env);

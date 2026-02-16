@@ -16,10 +16,21 @@ Minimal TypeScript/Node.js service that bridges:
   - Accepts simulation output.
   - Validates run exists.
   - Blocks duplicate submissions.
+  - Only accepts submissions when the event state is `live` or `ended`.
   - Writes to `run_results` and marks run finished.
 - `GET /api/events/:code/leaderboard`
   - Returns ranked entries for an event.
   - Resolves display name from user metadata, falls back to masked email.
+- `GET /api/events/:code/status`
+  - Returns event runtime status fields used by simulation clients.
+- `POST /api/admin/sim-admin-link`
+  - Requires admin identity via `x-user-id`.
+  - Returns signed, short-lived admin URL for `admin.html`.
+- `POST /api/admin/events/:code/start|pause|resume|end`
+  - Requires admin identity via `x-user-id`.
+  - Controls event lifecycle state.
+- `GET /api/admin/validate-token`
+  - Verifies admin token integrity and expiration for sim admin page.
 
 ## Environment Variables
 
@@ -30,6 +41,10 @@ Set these on Render (and locally in `.env` for development):
 - `MINT_SITE_URL` (allowed CORS origin for Mint frontend, e.g. `https://mint.example.com`)
 - `SIM_SITE_URL` (allowed CORS origin for simulation frontend, e.g. `https://sim.example.com`)
 - `PORT` (optional, defaults to `3000`)
+- `ADMIN_JWT_SECRET` (strong secret used to sign admin tokens)
+- `ADMIN_EMAIL_ALLOWLIST` (optional comma-separated admin emails used if `profiles` table is unavailable)
+- `MINT_ADMIN_ORIGIN` (optional extra CORS origin for Mint admin host)
+- `SIM_ORIGIN` (optional extra CORS origin for simulation host)
 
 > Never expose `SUPABASE_SERVICE_ROLE_KEY` to the frontend.
 

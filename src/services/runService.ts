@@ -63,7 +63,7 @@ export async function createRun(input: z.infer<typeof createRunSchema>) {
 export async function submitRunResult(input: z.infer<typeof submitRunSchema>) {
   const { data: run, error: runError } = await supabase
     .from("runs")
-    .select("id, finished_at")
+    .select("id, finished_at, event_id")
     .eq("id", input.runId)
     .maybeSingle();
 
@@ -75,6 +75,27 @@ export async function submitRunResult(input: z.infer<typeof submitRunSchema>) {
   if (!run) {
     console.log("Submit run attempt", { runId: input.runId, duplicate: false, status: 404 });
     throw new HttpError(404, "Run not found");
+  }
+
+  const { data: event, error: eventError } = await supabase
+    .from("events")
+    .select("id, state")
+    .eq("id", run.event_id)
+    .maybeSingle();
+
+  if (eventError) {
+    console.error("Submit run attempt", { runId: input.runId, duplicate: false, status: 500, reason: eventError.message });
+    throw new HttpError(500, `Failed to load event for run: ${eventError.message}`);
+  }
+
+  if (!event) {
+    console.log("Submit run attempt", { runId: input.runId, duplicate: false, status: 404, reason: "event_not_found" });
+    throw new HttpError(404, "Event not found for run");
+  }
+
+  if (!["live", "ended"].includes(event.state)) {
+    console.log("Submit run attempt", { runId: input.runId, duplicate: false, status: 409, reason: `event_state_${event.state}` });
+    throw new HttpError(409, `Run submissions are not accepted while event is ${event.state}`);
   }
 
   const { data: existingResult, error: existingError } = await supabase
