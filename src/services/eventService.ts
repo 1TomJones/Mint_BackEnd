@@ -34,12 +34,30 @@ export async function listEvents(options: { state?: EventState; includeAll: bool
   if (options.state) {
     query = query.eq("state", options.state);
   } else if (!options.includeAll) {
-    query = query.in("state", ["active", "live", "paused"]);
+    query = query.in("state", ["active", "live", "paused"]).is("ended_at", null);
   }
 
   const { data, error } = await query;
   if (error) {
     throw new HttpError(500, `Failed to list events: ${error.message}`);
+  }
+
+  return {
+    events: data ?? []
+  };
+}
+
+
+export async function listPublicEvents() {
+  const { data, error } = await supabase
+    .from("events")
+    .select("code, name, scenario_id, sim_type, duration_minutes, state, created_at")
+    .in("state", ["active", "live", "paused"])
+    .is("ended_at", null)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new HttpError(500, `Failed to list public events: ${error.message}`);
   }
 
   return {
