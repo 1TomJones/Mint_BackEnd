@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { getLeaderboard } from "../services/leaderboardService";
 import { getEventByCode, isAdmin, requireAdmin } from "../services/adminService";
-import { createEvent, listEvents, parseEventState } from "../services/eventService";
+import { createEvent, listEvents, listPublicEvents, parseEventState } from "../services/eventService";
 import { HttpError } from "../types/errors";
 
 const paramsSchema = z.object({
@@ -28,11 +28,22 @@ const createEventSchema = z.object({
 
 export const eventsRouter = Router();
 
+eventsRouter.get("/public", async (_req, res, next) => {
+  try {
+    const result = await listPublicEvents();
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
 eventsRouter.get("/", async (req, res, next) => {
   try {
     const userId = req.headers["x-user-id"] as string | undefined;
     if (!userId) {
-      throw new HttpError(401, "Missing x-user-id");
+      throw new HttpError(401, "Missing x-user-id header", {
+        errorCode: "MISSING_USER_ID"
+      });
     }
 
     const { state: rawState } = listEventsQuerySchema.parse(req.query);

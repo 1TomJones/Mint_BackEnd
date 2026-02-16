@@ -15,7 +15,19 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
   }
 
   if (err instanceof HttpError) {
-    return res.status(err.statusCode).json({ error: err.message });
+    const payload: Record<string, unknown> = {
+      error: err.errorCode ?? err.message
+    };
+
+    if (err.errorCode) {
+      payload.message = err.message;
+    }
+
+    if (err.details) {
+      payload.details = err.details;
+    }
+
+    return res.status(err.statusCode).json(payload);
   }
 
   console.error("Unhandled error", err);
