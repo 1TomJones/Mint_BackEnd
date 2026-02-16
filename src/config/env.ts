@@ -13,7 +13,6 @@ const envSchema = z.object({
   PORTFOLIO_SIM_URL: z.string().url().optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  ADMIN_JWT_SECRET: z.string().min(32),
   ADMIN_ALLOWLIST_EMAILS: z.string().optional(),
   ADMIN_EMAIL_ALLOWLIST: z.string().optional()
 });

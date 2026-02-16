@@ -16,7 +16,7 @@ eventsRouter.get("/public", async (_req, res, next) => {
 
 eventsRouter.post("/create", async (req, res, next) => {
   try {
-    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    const user = await resolveRequestUser(req);
     requireAdmin(user);
     const payload = createAdminEventSchema.parse(req.body);
     const event = await createAdminEvent(payload);

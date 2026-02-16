@@ -16,7 +16,7 @@ const allowedOrigins = new Set(
 app.use((req, res, next) => {
   const startedAt = Date.now();
 
-  const allowedHeaders = "Content-Type, Authorization, x-user-id";
+  const allowedHeaders = "Content-Type, Authorization";
   const requestOrigin = req.headers.origin?.replace(/\/$/, "");
   const normalizedOrigin = requestOrigin?.toLowerCase();
   const isLocalDev = normalizedOrigin ? /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalizedOrigin) : false;
@@ -35,7 +35,6 @@ app.use((req, res, next) => {
       route: req.originalUrl,
       method: req.method,
       status_code: res.statusCode,
-      user_id_present: Boolean(req.headers["x-user-id"]),
       duration_ms: Date.now() - startedAt
     });
   });
