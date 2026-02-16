@@ -20,7 +20,7 @@ export const submitRunSchema = z.object({
 export async function createRun(input: z.infer<typeof createRunSchema>) {
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, code, sim_url")
+    .select("id, code, sim_url, scenario_id")
     .eq("code", input.eventCode)
     .maybeSingle();
 
@@ -54,9 +54,12 @@ export async function createRun(input: z.infer<typeof createRunSchema>) {
     throw new HttpError(500, `Failed to create run: ${runError?.message ?? "unknown error"}`);
   }
 
+  const baseSimUrl = event.sim_url.replace(/\/$/, "");
+  const separator = baseSimUrl.includes("?") ? "&" : "?";
+
   return {
     runId: run.id,
-    simUrl: `${event.sim_url}${event.sim_url.includes("?") ? "&" : "?"}run_id=${run.id}`
+    simUrl: `${baseSimUrl}${separator}run_id=${encodeURIComponent(run.id)}&event_code=${encodeURIComponent(event.code)}&scenario_id=${encodeURIComponent(event.scenario_id)}`
   };
 }
 
@@ -165,7 +168,7 @@ export async function getRunDetail(runId: string) {
 
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, code, sim_url")
+    .select("id, code, sim_url, scenario_id")
     .eq("id", run.event_id)
     .maybeSingle();
 
