@@ -6,21 +6,21 @@ import { createRun, createRunSchema, getRunDetail, submitRunResult, submitRunSch
 export const runsRouter = Router();
 
 const createRunBodySchema = z.object({
-  eventCode: z.string().min(1).optional(),
-  event_code: z.string().min(1).optional()
+  event_code: z.string().min(1),
+  eventCode: z.string().min(1).optional()
 });
 
 runsRouter.post("/create", async (req, res, next) => {
   try {
     const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
     const body = createRunBodySchema.parse(req.body ?? {});
-    const eventCode = body.eventCode ?? body.event_code;
+    const eventCode = body.event_code ?? body.eventCode;
 
     if (!eventCode) {
-      return res.status(400).json({ ok: false, error: "Missing eventCode" });
+      return res.status(400).json({ ok: false, error: "Missing event_code" });
     }
 
-    const payload = createRunSchema.parse({ eventCode, userId });
+    const payload = createRunSchema.parse({ event_code: eventCode, user_id: userId });
     const result = await createRun(payload);
     return res.status(201).json({ ok: true, ...result });
   } catch (error) {
