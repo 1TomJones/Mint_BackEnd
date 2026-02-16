@@ -122,3 +122,22 @@ export async function getRunDetail(runId: string) {
 
   return { run };
 }
+
+export async function getRunsHistory(userId: string) {
+  const { data, error } = await supabase
+    .from("runs")
+    .select(
+      "id,created_at,finished_at,event_id,events!runs_event_id_fkey(name,code),run_results(score,pnl,sharpe,max_drawdown)"
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    logSupabaseError("GET /api/runs/history", error);
+    throw new HttpError(500, `Failed to fetch runs history: ${error.message}`);
+  }
+
+  return {
+    runs: data ?? []
+  };
+}
