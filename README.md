@@ -46,7 +46,6 @@ Set these on Render (and locally in `.env` for development):
 - `SIM_SITE_URL` (allowed CORS origin for simulation frontend, e.g. `https://sim.example.com`)
 - `PORT` (optional, defaults to `3000`)
 - `ADMIN_ALLOWLIST_EMAILS` (optional comma-separated admin emails used for admin endpoint access)
-- `ADMIN_EMAIL_ALLOWLIST` (deprecated alias for backwards compatibility)
 - `MINT_ADMIN_ORIGIN` (optional extra CORS origin for Mint admin host)
 - `SIM_ORIGIN` (optional extra CORS origin for simulation host)
 - `PORTFOLIO_SIM_URL` (optional fallback sim URL used by admin event creation when `sim_url` is omitted)
