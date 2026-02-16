@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { resolveRequestUserId } from "../services/authService";
-import { createRun, createRunSchema, getRunDetail, submitRunResult, submitRunSchema } from "../services/runService";
+import { createRun, createRunSchema, getRunDetail, getRunsHistory, submitRunResult, submitRunSchema } from "../services/runService";
 
 export const runsRouter = Router();
 
@@ -33,6 +33,16 @@ runsRouter.post("/submit", async (req, res, next) => {
     const payload = submitRunSchema.parse(req.body);
     const result = await submitRunResult(payload);
     return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+runsRouter.get("/history", async (req, res, next) => {
+  try {
+    const userId = await resolveRequestUserId(req);
+    const result = await getRunsHistory(userId);
+    return res.status(200).json({ ok: true, ...result });
   } catch (error) {
     return next(error);
   }
