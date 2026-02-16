@@ -34,6 +34,11 @@ export async function resolveRequestUserId(req: Request, options?: { allowLegacy
   }
 
   if (headerUserId && options?.allowLegacyHeaderOnly) {
+    const { data, error } = await supabase.auth.admin.getUserById(headerUserId);
+    if (error || !data.user?.id) {
+      throw new HttpError(401, "Invalid x-user-id header");
+    }
+
     return headerUserId;
   }
 
