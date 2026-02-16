@@ -11,16 +11,28 @@ const adminEmailAllowlist = new Set(
 
 export function requireAdmin(user: AuthenticatedUser | undefined) {
   if (!user) {
-    throw new HttpError(401, "Missing user identity");
+    console.warn("admin_auth_rejected", {
+      reason: "missing_user_identity"
+    });
+    throw new HttpError(401, "unauthorized");
   }
 
   const email = user.email?.trim().toLowerCase();
   if (!email) {
-    throw new HttpError(403, "Admin access required");
+    console.warn("admin_auth_rejected", {
+      reason: "missing_user_email",
+      user_id: user.id
+    });
+    throw new HttpError(403, "forbidden");
   }
 
   if (!adminEmailAllowlist.has(email)) {
-    throw new HttpError(403, "Admin access required");
+    console.warn("admin_auth_rejected", {
+      reason: "email_not_allowlisted",
+      user_id: user.id,
+      email
+    });
+    throw new HttpError(403, "forbidden");
   }
 
   return user.id;
