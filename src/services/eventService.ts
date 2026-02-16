@@ -2,8 +2,8 @@ import { z } from "zod";
 import { supabase } from "../lib/supabase";
 import { HttpError } from "../types/errors";
 
-const requiredEventColumns = ["event_code", "event_name", "sim_url", "scenario_id", "duration_minutes", "status"] as const;
-const selectedEventColumns = "id,event_code,event_name,sim_url,scenario_id,duration_minutes,status,starts_at,ends_at,created_at";
+const requiredEventColumns = ["code", "name", "sim_url", "scenario_id", "duration_minutes", "status"] as const;
+const selectedEventColumns = "id,event_code:code,event_name:name,sim_url,scenario_id,duration_minutes,status,starts_at,ends_at,created_at";
 
 export const createAdminEventSchema = z.object({
   event_code: z.string().trim().toUpperCase().min(1).regex(/^[A-Z0-9_-]+$/),
@@ -85,8 +85,8 @@ export async function createAdminEvent(input: z.infer<typeof createAdminEventSch
   const { data, error } = await supabase
     .from("events")
     .insert({
-      event_code: payload.event_code,
-      event_name: payload.event_name,
+      code: payload.event_code,
+      name: payload.event_name,
       sim_url: payload.sim_url,
       scenario_id: payload.scenario_id,
       duration_minutes: payload.duration_minutes,
@@ -124,8 +124,8 @@ export async function updateEventStatus(eventCode: string, action: "start" | "pa
   const { data, error } = await supabase
     .from("events")
     .update(patch)
-    .eq("event_code", eventCode)
-    .select("event_code, status, starts_at, ends_at")
+    .eq("code", eventCode)
+    .select("event_code:code,status,starts_at,ends_at")
     .single();
 
   if (error || !data) {

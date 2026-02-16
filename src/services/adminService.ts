@@ -18,6 +18,20 @@ export async function requireAdmin(req: Request, _res: Response, next: NextFunct
     return next(error);
   }
 
+  const providedUserId = req.headers["x-user-id"];
+  const normalizedProvidedUserId = Array.isArray(providedUserId) ? providedUserId[0] : providedUserId;
+
+  if (!normalizedProvidedUserId || normalizedProvidedUserId !== user.id) {
+    console.warn("admin_auth_rejected", {
+      route: req.originalUrl,
+      method: req.method,
+      reason: "x_user_id_mismatch",
+      user_id: user.id,
+      header_user_id: normalizedProvidedUserId
+    });
+    return next(new HttpError(401, "unauthorized"));
+  }
+
   const email = user.email?.trim().toLowerCase();
   if (!email) {
     console.warn("admin_auth_rejected", {
