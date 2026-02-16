@@ -8,7 +8,7 @@ Minimal TypeScript/Node.js service that bridges:
 ## Features
 
 - `POST /api/runs/create`
-  - Requires header `x-user-id` (exact header name) for MVP user identity.
+  - Uses `Authorization: Bearer <access_token>` as primary identity source (`x-user-id` temporarily supported for backward compatibility).
   - Validates event by code.
   - Creates a run for a user.
   - Returns a simulation URL with `run_id`, `event_code`, and `scenario_id` query params.
@@ -24,10 +24,14 @@ Minimal TypeScript/Node.js service that bridges:
 - `GET /api/events/:code/status`
   - Returns event runtime status fields used by simulation clients.
 - `POST /api/admin/sim-admin-link`
-  - Requires admin identity via `x-user-id`.
+  - Requires admin identity via JWT (fallback `x-user-id` supported temporarily).
   - Returns signed, short-lived admin URL for `admin.html`.
+- `POST /api/admin/events/create`
+  - Admin-only endpoint for creating events.
+  - Accepts `event_code`, `event_name`, `scenario_id`, `duration_minutes`, and optional `sim_url`.
+  - Stores `scenario_id` on `public.events` and returns `{ ok: true, event: ... }`.
 - `POST /api/admin/events/:code/start|pause|resume|end`
-  - Requires admin identity via `x-user-id`.
+  - Requires admin identity via JWT (fallback `x-user-id` supported temporarily).
   - Controls event lifecycle state.
 - `GET /api/admin/validate-token`
   - Verifies admin token integrity and expiration for sim admin page.
@@ -45,6 +49,7 @@ Set these on Render (and locally in `.env` for development):
 - `ADMIN_EMAIL_ALLOWLIST` (optional comma-separated admin emails used if `profiles` table is unavailable)
 - `MINT_ADMIN_ORIGIN` (optional extra CORS origin for Mint admin host)
 - `SIM_ORIGIN` (optional extra CORS origin for simulation host)
+- `PORTFOLIO_SIM_URL` (optional fallback sim URL used by admin event creation when `sim_url` is omitted)
 
 > Never expose `SUPABASE_SERVICE_ROLE_KEY` to the frontend.
 

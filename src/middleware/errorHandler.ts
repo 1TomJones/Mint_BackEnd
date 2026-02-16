@@ -3,33 +3,27 @@ import { ZodError } from "zod";
 import { HttpError } from "../types/errors";
 
 export function notFoundHandler(_req: Request, res: Response) {
-  res.status(404).json({ error: "Not found" });
+  res.status(404).json({ ok: false, error: "Not found" });
 }
 
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ZodError) {
     return res.status(400).json({
+      ok: false,
       error: "Validation failed",
       details: err.flatten()
     });
   }
 
   if (err instanceof HttpError) {
-    const payload: Record<string, unknown> = {
-      error: err.errorCode ?? err.message
-    };
-
-    if (err.errorCode) {
-      payload.message = err.message;
-    }
-
-    if (err.details) {
-      payload.details = err.details;
-    }
-
-    return res.status(err.statusCode).json(payload);
+    return res.status(err.statusCode).json({
+      ok: false,
+      error: err.message,
+      ...(err.errorCode ? { error_code: err.errorCode } : {}),
+      ...(err.details ? { details: err.details } : {})
+    });
   }
 
   console.error("Unhandled error", err);
-  return res.status(500).json({ error: "Internal server error" });
+  return res.status(500).json({ ok: false, error: "Internal server error" });
 }

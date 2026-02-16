@@ -77,7 +77,10 @@ export async function listPublicEvents() {
   }
 
   return {
-    events: data ?? []
+    events: (data ?? []).map((event) => ({
+      ...event,
+      scenario_id: event.scenario_id ?? "unknown"
+    }))
   };
 }
 

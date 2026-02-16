@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getLeaderboard } from "../services/leaderboardService";
 import { getEventByCode, isAdmin, requireAdmin } from "../services/adminService";
 import { createEvent, listEvents, listPublicEvents, parseEventState } from "../services/eventService";
+import { resolveRequestUserId } from "../services/authService";
 import { HttpError } from "../types/errors";
 
 const paramsSchema = z.object({
@@ -40,12 +41,7 @@ eventsRouter.get("/public", async (_req, res, next) => {
 
 eventsRouter.get("/", async (req, res, next) => {
   try {
-    const userId = req.headers["x-user-id"] as string | undefined;
-    if (!userId) {
-      throw new HttpError(401, "Missing x-user-id header", {
-        errorCode: "MISSING_USER_ID"
-      });
-    }
+    const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
 
     const { state: rawState } = listEventsQuerySchema.parse(req.query);
     const state = rawState ? parseEventState(rawState) : undefined;
@@ -68,10 +64,11 @@ eventsRouter.get("/", async (req, res, next) => {
 
 eventsRouter.post("/", async (req, res, next) => {
   try {
-    await requireAdmin(req.headers["x-user-id"] as string | undefined);
+    const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
+    await requireAdmin(userId);
     const payload = createEventSchema.parse(req.body);
     const event = await createEvent(payload);
-    return res.status(201).json({ event });
+    return res.status(201).json({ ok: true, event });
   } catch (error) {
     return next(error);
   }
