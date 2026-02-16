@@ -1,5 +1,5 @@
-import { User } from "@supabase/supabase-js";
 import { env } from "../config/env";
+import type { AuthenticatedUser } from "./authService";
 import { HttpError } from "../types/errors";
 
 const adminEmailAllowlist = new Set(
@@ -9,7 +9,7 @@ const adminEmailAllowlist = new Set(
     .filter(Boolean)
 );
 
-export function requireAdmin(user: User | undefined) {
+export function requireAdmin(user: AuthenticatedUser | undefined) {
   if (!user) {
     throw new HttpError(401, "Missing user identity");
   }
