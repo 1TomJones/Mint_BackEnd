@@ -141,6 +141,9 @@ export async function getEventByCode(code: string) {
 
 export async function createSimAdminLink(eventCode: string, adminUserId: string) {
   const event = await getEventByCode(eventCode);
+  if (!["active", "live"].includes(event.state)) {
+    throw new HttpError(409, `Admin link is only available while event is active/live (current: ${event.state})`);
+  }
   const exp = Math.floor(Date.now() / 1000) + 15 * 60;
   const token = signAdminToken({ eventCode: event.code, adminUserId, exp });
   const baseAdminUrl = `${event.sim_url.replace(/\/$/, "")}/admin.html`;
@@ -151,15 +154,27 @@ export async function createSimAdminLink(eventCode: string, adminUserId: string)
   };
 }
 
-export async function updateEventState(code: string, nextState: "live" | "paused" | "ended") {
+export async function updateEventState(
+  code: string,
+  action: "start" | "pause" | "resume" | "end"
+) {
   const event = await getEventByCode(code);
   const nowIso = new Date().toISOString();
 
-  const patch: Record<string, string | null> = { state: nextState };
-  if (nextState === "live" && !event.started_at) {
+  const patch: Record<string, string | null> = {};
+
+  if (action === "start") {
+    patch.state = "live";
     patch.started_at = nowIso;
-  }
-  if (nextState === "ended") {
+  } else if (action === "pause") {
+    patch.state = "paused";
+  } else if (action === "resume") {
+    patch.state = "live";
+    if (!event.started_at) {
+      patch.started_at = nowIso;
+    }
+  } else if (action === "end") {
+    patch.state = "ended";
     patch.ended_at = nowIso;
   }
 

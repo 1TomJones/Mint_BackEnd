@@ -32,7 +32,7 @@ adminRouter.post("/events/:code/start", async (req, res, next) => {
   try {
     await requireAdmin(req.headers["x-user-id"] as string | undefined);
     const { code } = codeParamSchema.parse(req.params);
-    const result = await updateEventState(code, "live");
+    const result = await updateEventState(code, "start");
     return res.status(200).json(result);
   } catch (error) {
     return next(error);
@@ -43,7 +43,7 @@ adminRouter.post("/events/:code/pause", async (req, res, next) => {
   try {
     await requireAdmin(req.headers["x-user-id"] as string | undefined);
     const { code } = codeParamSchema.parse(req.params);
-    const result = await updateEventState(code, "paused");
+    const result = await updateEventState(code, "pause");
     return res.status(200).json(result);
   } catch (error) {
     return next(error);
@@ -54,7 +54,7 @@ adminRouter.post("/events/:code/resume", async (req, res, next) => {
   try {
     await requireAdmin(req.headers["x-user-id"] as string | undefined);
     const { code } = codeParamSchema.parse(req.params);
-    const result = await updateEventState(code, "live");
+    const result = await updateEventState(code, "resume");
     return res.status(200).json(result);
   } catch (error) {
     return next(error);
@@ -65,7 +65,7 @@ adminRouter.post("/events/:code/end", async (req, res, next) => {
   try {
     await requireAdmin(req.headers["x-user-id"] as string | undefined);
     const { code } = codeParamSchema.parse(req.params);
-    const result = await updateEventState(code, "ended");
+    const result = await updateEventState(code, "end");
     return res.status(200).json(result);
   } catch (error) {
     return next(error);
