@@ -15,7 +15,7 @@ function getBearerToken(authHeader: string | undefined) {
   return token;
 }
 
-export async function resolveRequestUserId(req: Request, options?: { allowLegacyHeaderOnly?: boolean }) {
+export async function resolveRequestUser(req: Request, options?: { allowLegacyHeaderOnly?: boolean }) {
   const headerUserId = req.headers["x-user-id"] as string | undefined;
   const authHeader = req.headers.authorization;
   const token = getBearerToken(authHeader);
@@ -30,7 +30,7 @@ export async function resolveRequestUserId(req: Request, options?: { allowLegacy
       throw new HttpError(401, "x-user-id does not match token subject");
     }
 
-    return data.user.id;
+    return data.user;
   }
 
   if (headerUserId && options?.allowLegacyHeaderOnly) {
@@ -39,7 +39,7 @@ export async function resolveRequestUserId(req: Request, options?: { allowLegacy
       throw new HttpError(401, "Invalid x-user-id header");
     }
 
-    return headerUserId;
+    return data.user;
   }
 
   if (options?.allowLegacyHeaderOnly) {
@@ -47,4 +47,9 @@ export async function resolveRequestUserId(req: Request, options?: { allowLegacy
   }
 
   throw new HttpError(401, "Missing Authorization Bearer token");
+}
+
+export async function resolveRequestUserId(req: Request, options?: { allowLegacyHeaderOnly?: boolean }) {
+  const user = await resolveRequestUser(req, options);
+  return user.id;
 }

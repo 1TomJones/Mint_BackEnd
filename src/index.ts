@@ -7,6 +7,12 @@ import { adminRouter } from "./routes/admin";
 
 const app = express();
 
+const allowedOrigins = new Set(
+  [env.MINT_SITE_URL, env.SIM_SITE_URL]
+    .filter(Boolean)
+    .map((origin) => origin.replace(/\/$/, "").toLowerCase())
+);
+
 app.use((req, res, next) => {
   const startedAt = Date.now();
 
@@ -14,9 +20,9 @@ app.use((req, res, next) => {
   const requestOrigin = req.headers.origin?.replace(/\/$/, "");
   const normalizedOrigin = requestOrigin?.toLowerCase();
   const isLocalDev = normalizedOrigin ? /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalizedOrigin) : false;
-  const isMintRender = normalizedOrigin ? /^https:\/\/mint-[a-z0-9-]+\.onrender\.com$/i.test(normalizedOrigin) : false;
+  const isAllowedOrigin = Boolean(normalizedOrigin && allowedOrigins.has(normalizedOrigin));
 
-  if (requestOrigin && (isLocalDev || isMintRender)) {
+  if (requestOrigin && (isLocalDev || isAllowedOrigin)) {
     res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   }
 

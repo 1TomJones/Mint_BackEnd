@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAdmin } from "../services/adminService";
-import { resolveRequestUserId } from "../services/authService";
+import { resolveRequestUser } from "../services/authService";
 import { createAdminEvent, createAdminEventSchema, listAdminEvents, updateEventStatus } from "../services/eventService";
 
 export const adminRouter = Router();
@@ -12,8 +12,8 @@ const eventCodeParamSchema = z.object({
 
 adminRouter.get("/events", async (req, res, next) => {
   try {
-    const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
-    await requireAdmin(userId);
+    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    requireAdmin(user);
     const result = await listAdminEvents();
     return res.status(200).json(result);
   } catch (error) {
@@ -23,8 +23,8 @@ adminRouter.get("/events", async (req, res, next) => {
 
 adminRouter.post("/events", async (req, res, next) => {
   try {
-    const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
-    await requireAdmin(userId);
+    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    requireAdmin(user);
     const payload = createAdminEventSchema.parse(req.body);
     const event = await createAdminEvent(payload);
     console.log("event_created", { route: req.originalUrl, event_code: event.event_code, scenario_id: event.scenario_id, duration_minutes: event.duration_minutes, status: event.status });
@@ -36,8 +36,8 @@ adminRouter.post("/events", async (req, res, next) => {
 
 adminRouter.post("/events/:event_code/start", async (req, res, next) => {
   try {
-    const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
-    await requireAdmin(userId);
+    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    requireAdmin(user);
     const { event_code } = eventCodeParamSchema.parse(req.params);
     const event = await updateEventStatus(event_code, "start");
     return res.status(200).json({ ok: true, event });
@@ -48,8 +48,8 @@ adminRouter.post("/events/:event_code/start", async (req, res, next) => {
 
 adminRouter.post("/events/:event_code/pause", async (req, res, next) => {
   try {
-    const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
-    await requireAdmin(userId);
+    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    requireAdmin(user);
     const { event_code } = eventCodeParamSchema.parse(req.params);
     const event = await updateEventStatus(event_code, "pause");
     return res.status(200).json({ ok: true, event });
@@ -60,8 +60,8 @@ adminRouter.post("/events/:event_code/pause", async (req, res, next) => {
 
 adminRouter.post("/events/:event_code/end", async (req, res, next) => {
   try {
-    const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
-    await requireAdmin(userId);
+    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    requireAdmin(user);
     const { event_code } = eventCodeParamSchema.parse(req.params);
     const event = await updateEventStatus(event_code, "end");
     return res.status(200).json({ ok: true, event });
