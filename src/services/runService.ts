@@ -36,6 +36,10 @@ export async function createRun(input: z.infer<typeof createRunSchema>) {
     throw new HttpError(404, "Event code not found");
   }
 
+  if (!event.scenario_id) {
+    throw new HttpError(409, "Event is missing scenario_id");
+  }
+
   const { data: run, error: runError } = await supabase
     .from("runs")
     .insert({
@@ -56,10 +60,13 @@ export async function createRun(input: z.infer<typeof createRunSchema>) {
 
   const baseSimUrl = event.sim_url.replace(/\/$/, "");
   const separator = baseSimUrl.includes("?") ? "&" : "?";
+  const launchUrl = `${baseSimUrl}${separator}run_id=${encodeURIComponent(run.id)}&scenario_id=${encodeURIComponent(event.scenario_id)}`;
+  const adminLaunchUrl = `${baseSimUrl}/admin.html?event_id=${encodeURIComponent(event.id)}&scenario_id=${encodeURIComponent(event.scenario_id)}`;
 
   return {
-    runId: run.id,
-    simUrl: `${baseSimUrl}${separator}run_id=${encodeURIComponent(run.id)}&event_code=${encodeURIComponent(event.code)}&scenario_id=${encodeURIComponent(event.scenario_id)}`
+    run_id: run.id,
+    launch_url: launchUrl,
+    admin_launch_url: adminLaunchUrl
   };
 }
 
