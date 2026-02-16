@@ -21,16 +21,58 @@ const listEventsQuerySchema = z.object({
 const createEventSchema = z.object({
   code: z.string().trim().toUpperCase().min(1).regex(/^[A-Z0-9_-]+$/, "code must be uppercase"),
   name: z.string().trim().min(1),
-  sim_type: z.literal("portfolio"),
+  sim_type: z.literal("portfolio").optional().default("portfolio"),
   sim_url: z.string().url(),
   scenario_id: z.string().trim().min(1),
   scenario_name: z.string().trim().min(1).optional(),
   duration_minutes: z.coerce.number().int().min(1).max(180)
 });
 
+function validateCreateEventPayload(body: unknown) {
+  const rawPayload = body as Record<string, unknown>;
+  if (!rawPayload?.scenario_id) {
+    throw new HttpError(400, "scenario_id is required");
+  }
+
+  if (rawPayload.duration_minutes === undefined || rawPayload.duration_minutes === null || rawPayload.duration_minutes === "") {
+    throw new HttpError(400, "duration_minutes is required");
+  }
+
+  return createEventSchema.parse(body);
+}
+
+function toCreatedEventResponse(event: {
+  id: string;
+  code: string;
+  name: string;
+  scenario_id: string;
+  duration_minutes: number;
+  sim_url: string;
+  state: string;
+}) {
+  return {
+    id: event.id,
+    code: event.code,
+    name: event.name,
+    scenario_id: event.scenario_id,
+    duration_minutes: event.duration_minutes,
+    sim_url: event.sim_url,
+    status: event.state
+  };
+}
+
 export const eventsRouter = Router();
 
 eventsRouter.get("/public", async (_req, res, next) => {
+  try {
+    const result = await listPublicEvents();
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+eventsRouter.get("/public-active", async (_req, res, next) => {
   try {
     const result = await listPublicEvents();
     return res.status(200).json(result);
@@ -66,9 +108,21 @@ eventsRouter.post("/", async (req, res, next) => {
   try {
     const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
     await requireAdmin(userId);
-    const payload = createEventSchema.parse(req.body);
+    const payload = validateCreateEventPayload(req.body);
     const event = await createEvent({ ...payload, admin_user_id: userId });
-    return res.status(201).json({ ok: true, event });
+    return res.status(201).json({ ok: true, event: toCreatedEventResponse(event) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+eventsRouter.post("/create", async (req, res, next) => {
+  try {
+    const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
+    await requireAdmin(userId);
+    const payload = validateCreateEventPayload(req.body);
+    const event = await createEvent({ ...payload, admin_user_id: userId });
+    return res.status(201).json({ ok: true, event: toCreatedEventResponse(event) });
   } catch (error) {
     return next(error);
   }

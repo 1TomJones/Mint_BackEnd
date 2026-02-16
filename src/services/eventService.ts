@@ -38,6 +38,23 @@ function throwSchemaMismatchIfScenarioIdMissing(error: { message?: string | null
   }
 }
 
+function throwSchemaMismatchIfRequiredColumnsMissing(error: { message?: string | null; details?: string | null; code?: string | null }) {
+  throwSchemaMismatchIfScenarioIdMissing(error);
+
+  const content = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
+  const missingDurationText =
+    error.code === "42703" ||
+    content.includes("events.duration_minutes") ||
+    content.includes("column duration_minutes") ||
+    content.includes("duration_minutes does not exist");
+
+  if (missingDurationText) {
+    throw new HttpError(500, "events.duration_minutes missing", {
+      errorCode: "SCHEMA_MISMATCH"
+    });
+  }
+}
+
 export function parseEventState(input: unknown) {
   const parsed = eventStateSchema.safeParse(input);
   if (!parsed.success) {
@@ -72,20 +89,26 @@ export async function listEvents(options: { state?: EventState; includeAll: bool
 export async function listPublicEvents() {
   const { data, error } = await supabase
     .from("events")
-    .select("code, name, scenario_id, scenario_name, sim_type, duration_minutes, state, created_at")
+    .select("id, code, name, scenario_id, duration_minutes, sim_url, state, started_at")
     .in("state", ["active", "live", "paused"])
     .is("ended_at", null)
-    .order("created_at", { ascending: false });
+    .order("started_at", { ascending: false, nullsFirst: false });
 
   if (error) {
-    throwSchemaMismatchIfScenarioIdMissing(error);
+    throwSchemaMismatchIfRequiredColumnsMissing(error);
     throw new HttpError(500, `Failed to list public events: ${error.message}`);
   }
 
   return {
     events: (data ?? []).map((event) => ({
-      ...event,
-      scenario_id: event.scenario_id ?? "unknown"
+      id: event.id,
+      code: event.code,
+      name: event.name,
+      scenario_id: event.scenario_id,
+      duration_minutes: event.duration_minutes,
+      sim_url: event.sim_url,
+      status: event.state,
+      starts_at: event.started_at
     }))
   };
 }
@@ -136,7 +159,7 @@ export async function createEvent(input: CreateEventInput) {
 
   if (createError || !createdEvent) {
     if (createError) {
-      throwSchemaMismatchIfScenarioIdMissing(createError);
+      throwSchemaMismatchIfRequiredColumnsMissing(createError);
 
       if (isMissingColumnError(createError, "created_by") || isMissingColumnError(createError, "admin_user_id")) {
         throw new HttpError(500, "events.created_by/admin_user_id missing", {
