@@ -12,7 +12,7 @@ const eventCodeParamSchema = z.object({
 
 adminRouter.get("/events", async (req, res, next) => {
   try {
-    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    const user = await resolveRequestUser(req);
     requireAdmin(user);
     const result = await listAdminEvents();
     return res.status(200).json(result);
@@ -23,7 +23,7 @@ adminRouter.get("/events", async (req, res, next) => {
 
 adminRouter.post("/events", async (req, res, next) => {
   try {
-    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    const user = await resolveRequestUser(req);
     requireAdmin(user);
     const payload = createAdminEventSchema.parse(req.body);
     const event = await createAdminEvent(payload);
@@ -36,7 +36,7 @@ adminRouter.post("/events", async (req, res, next) => {
 
 adminRouter.post("/events/:event_code/start", async (req, res, next) => {
   try {
-    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    const user = await resolveRequestUser(req);
     requireAdmin(user);
     const { event_code } = eventCodeParamSchema.parse(req.params);
     const event = await updateEventStatus(event_code, "start");
@@ -48,7 +48,7 @@ adminRouter.post("/events/:event_code/start", async (req, res, next) => {
 
 adminRouter.post("/events/:event_code/pause", async (req, res, next) => {
   try {
-    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    const user = await resolveRequestUser(req);
     requireAdmin(user);
     const { event_code } = eventCodeParamSchema.parse(req.params);
     const event = await updateEventStatus(event_code, "pause");
@@ -60,7 +60,7 @@ adminRouter.post("/events/:event_code/pause", async (req, res, next) => {
 
 adminRouter.post("/events/:event_code/end", async (req, res, next) => {
   try {
-    const user = await resolveRequestUser(req, { allowLegacyHeaderOnly: true });
+    const user = await resolveRequestUser(req);
     requireAdmin(user);
     const { event_code } = eventCodeParamSchema.parse(req.params);
     const event = await updateEventStatus(event_code, "end");

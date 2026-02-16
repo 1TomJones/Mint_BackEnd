@@ -12,7 +12,7 @@ const createRunBodySchema = z.object({
 
 runsRouter.post("/create", async (req, res, next) => {
   try {
-    const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
+    const userId = await resolveRequestUserId(req);
     const body = createRunBodySchema.parse(req.body ?? {});
     const eventCode = body.event_code ?? body.eventCode;
 

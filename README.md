@@ -8,7 +8,7 @@ Minimal TypeScript/Node.js service that bridges:
 ## Features
 
 - `POST /api/runs/create`
-  - Uses `Authorization: Bearer <access_token>` as primary identity source (`x-user-id` temporarily supported for backward compatibility).
+  - Uses `Authorization: Bearer <access_token>` as the required identity source.
   - Validates event by code.
   - Creates a run for a user.
   - Returns a simulation URL with `run_id`, `event_code`, and `scenario_id` query params.
@@ -24,14 +24,14 @@ Minimal TypeScript/Node.js service that bridges:
 - `GET /api/events/:code/status`
   - Returns event runtime status fields used by simulation clients.
 - `POST /api/admin/sim-admin-link`
-  - Requires admin identity via JWT (fallback `x-user-id` supported temporarily).
+  - Requires a valid Supabase access token and admin allowlist membership.
   - Returns signed, short-lived admin URL for `admin.html`.
 - `POST /api/admin/events/create`
   - Admin-only endpoint for creating events.
   - Accepts `event_code`, `event_name`, `scenario_id`, `duration_minutes`, and optional `sim_url`.
   - Stores `scenario_id` on `public.events` and returns `{ ok: true, event: ... }`.
 - `POST /api/admin/events/:code/start|pause|resume|end`
-  - Requires admin identity via JWT (fallback `x-user-id` supported temporarily).
+  - Requires a valid Supabase access token and admin allowlist membership.
   - Controls event lifecycle state.
 - `GET /api/admin/validate-token`
   - Verifies admin token integrity and expiration for sim admin page.
@@ -45,7 +45,6 @@ Set these on Render (and locally in `.env` for development):
 - `MINT_SITE_URL` (allowed CORS origin for Mint frontend, e.g. `https://mint.example.com`)
 - `SIM_SITE_URL` (allowed CORS origin for simulation frontend, e.g. `https://sim.example.com`)
 - `PORT` (optional, defaults to `3000`)
-- `ADMIN_JWT_SECRET` (strong secret used to sign admin tokens)
 - `ADMIN_ALLOWLIST_EMAILS` (optional comma-separated admin emails used for admin endpoint access)
 - `ADMIN_EMAIL_ALLOWLIST` (deprecated alias for backwards compatibility)
 - `MINT_ADMIN_ORIGIN` (optional extra CORS origin for Mint admin host)
