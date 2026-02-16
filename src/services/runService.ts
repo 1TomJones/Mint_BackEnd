@@ -37,8 +37,8 @@ export async function createRun(input: z.infer<typeof createRunSchema>) {
 
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("event_code, event_name, sim_url, scenario_id, status")
-    .eq("event_code", payload.event_code)
+    .select("event_code:code,event_name:name,sim_url,scenario_id,status")
+    .eq("code", payload.event_code)
     .maybeSingle();
 
   if (eventError) {
