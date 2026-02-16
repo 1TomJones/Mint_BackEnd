@@ -5,13 +5,12 @@ import { HttpError } from "../types/errors";
 const eventStateSchema = z.enum(["draft", "active", "live", "paused", "ended"]);
 
 const createEventInputSchema = z.object({
-  code: z.string().min(1),
+  code: z.string().min(1).regex(/^[A-Z0-9_-]+$/, "code must be uppercase"),
   name: z.string().min(1),
-  sim_type: z.string().min(1),
+  sim_type: z.literal("portfolio"),
   sim_url: z.string().url(),
   scenario_id: z.string().min(1),
-  duration_minutes: z.number().int().positive(),
-  state: z.enum(["draft", "active"])
+  duration_minutes: z.number().int().positive().optional()
 });
 
 export type EventState = z.infer<typeof eventStateSchema>;
@@ -35,7 +34,7 @@ export async function listEvents(options: { state?: EventState; includeAll: bool
   if (options.state) {
     query = query.eq("state", options.state);
   } else if (!options.includeAll) {
-    query = query.in("state", ["active", "live"]);
+    query = query.in("state", ["active", "live", "paused"]);
   }
 
   const { data, error } = await query;
@@ -67,7 +66,10 @@ export async function createEvent(input: CreateEventInput) {
 
   const { data: createdEvent, error: createError } = await supabase
     .from("events")
-    .insert(payload)
+    .insert({
+      ...payload,
+      state: "active"
+    })
     .select("id, code, name, sim_type, sim_url, scenario_id, duration_minutes, state, started_at, ended_at, created_at")
     .single();
 

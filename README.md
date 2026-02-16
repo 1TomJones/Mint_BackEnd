@@ -11,7 +11,7 @@ Minimal TypeScript/Node.js service that bridges:
   - Requires header `x-user-id` (exact header name) for MVP user identity.
   - Validates event by code.
   - Creates a run for a user.
-  - Returns a simulation URL with `run_id` query param.
+  - Returns a simulation URL with `run_id`, `event_code`, and `scenario_id` query params.
 - `POST /api/runs/submit`
   - Accepts simulation output.
   - Validates run exists.
@@ -82,7 +82,7 @@ npm start
 
 ## Suggested table expectations
 
-- `public.events`: `id`, `code`, `sim_url`
+- `public.events`: `id`, `code` (unique), `name`, `sim_type`, `sim_url`, `scenario_id`, `state`, `duration_minutes`, `created_at`, `started_at`, `ended_at`
 - `public.runs`: `id`, `event_id`, `user_id`, `finished_at`
 - `public.run_results`: `run_id`, `score`, `pnl`, `sharpe`, `max_drawdown`, `win_rate`, `extra`
 

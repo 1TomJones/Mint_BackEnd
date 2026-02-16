@@ -18,13 +18,12 @@ const listEventsQuerySchema = z.object({
 });
 
 const createEventSchema = z.object({
-  code: z.string().min(1),
+  code: z.string().min(1).regex(/^[A-Z0-9_-]+$/, "code must be uppercase"),
   name: z.string().min(1),
-  sim_type: z.string().min(1),
+  sim_type: z.literal("portfolio"),
   sim_url: z.string().url(),
   scenario_id: z.string().min(1),
-  duration_minutes: z.coerce.number().int().positive(),
-  state: z.enum(["draft", "active"])
+  duration_minutes: z.coerce.number().int().positive().optional()
 });
 
 export const eventsRouter = Router();
@@ -40,7 +39,7 @@ eventsRouter.get("/", async (req, res, next) => {
     const state = rawState ? parseEventState(rawState) : undefined;
     const admin = await isAdmin(userId);
 
-    if (state && !admin && !["active", "live"].includes(state)) {
+    if (state && !admin && !["active", "live", "paused"].includes(state)) {
       throw new HttpError(403, "Only admins can view this state");
     }
 

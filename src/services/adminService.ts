@@ -150,7 +150,7 @@ export async function createSimAdminLink(eventCode: string, adminUserId: string)
   const separator = baseAdminUrl.includes("?") ? "&" : "?";
 
   return {
-    adminUrl: `${baseAdminUrl}${separator}event_code=${encodeURIComponent(event.code)}&admin_token=${encodeURIComponent(token)}`
+    adminUrl: `${baseAdminUrl}${separator}event_code=${encodeURIComponent(event.code)}&scenario_id=${encodeURIComponent(event.scenario_id)}&admin_token=${encodeURIComponent(token)}`
   };
 }
 
