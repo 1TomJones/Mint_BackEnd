@@ -38,7 +38,7 @@ export async function resolveRequestUserId(req: Request, options?: { allowLegacy
   }
 
   if (options?.allowLegacyHeaderOnly) {
-    throw new HttpError(401, "Missing Authorization Bearer token or x-user-id header");
+    throw new HttpError(401, "Missing x-user-id header");
   }
 
   throw new HttpError(401, "Missing Authorization Bearer token");
