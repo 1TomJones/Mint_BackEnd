@@ -3,13 +3,16 @@ import { env } from "./config/env";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { eventsRouter } from "./routes/events";
 import { runsRouter } from "./routes/runs";
+import { adminRouter } from "./routes/admin";
 
 const app = express();
 
 app.use((req, res, next) => {
   const allowedHeaders = "Content-Type, Authorization, x-user-id";
   const requestOrigin = req.headers.origin?.replace(/\/$/, "");
-  const allowedOrigins = [env.MINT_SITE_URL, env.SIM_SITE_URL].map((origin) => origin.replace(/\/$/, ""));
+  const allowedOrigins = [env.MINT_SITE_URL, env.SIM_SITE_URL, env.MINT_ADMIN_ORIGIN, env.SIM_ORIGIN]
+    .filter((origin): origin is string => Boolean(origin))
+    .map((origin) => origin.replace(/\/$/, ""));
 
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
     res.setHeader("Access-Control-Allow-Origin", requestOrigin);
@@ -34,6 +37,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/runs", runsRouter);
 app.use("/api/events", eventsRouter);
+app.use("/api/admin", adminRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
