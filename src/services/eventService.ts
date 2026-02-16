@@ -2,7 +2,8 @@ import { z } from "zod";
 import { supabase } from "../lib/supabase";
 import { HttpError } from "../types/errors";
 
-const schemaMismatchMessage = "Supabase schema mismatch: events.scenario_id/duration_minutes required.";
+const requiredEventColumns = ["event_code", "event_name", "sim_url", "scenario_id", "duration_minutes", "status"] as const;
+const selectedEventColumns = "id,event_code,event_name,sim_url,scenario_id,duration_minutes,status,starts_at,ends_at,created_at";
 
 export const createAdminEventSchema = z.object({
   event_code: z.string().trim().toUpperCase().min(1).regex(/^[A-Z0-9_-]+$/),
@@ -12,13 +13,25 @@ export const createAdminEventSchema = z.object({
   duration_minutes: z.coerce.number().int().positive()
 });
 
-function throwSchemaMismatchIfRequiredColumnsMissing(error: { code?: string | null; message?: string | null; details?: string | null }) {
-  const text = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
-  const isMissingScenario = error.code === "42703" || text.includes("scenario_id");
-  const isMissingDuration = error.code === "42703" || text.includes("duration_minutes");
+function parseMissingColumnNames(error: { code?: string | null; message?: string | null; details?: string | null }) {
+  const combinedText = `${error.message ?? ""} ${error.details ?? ""}`;
+  const columnMatches = [...combinedText.matchAll(/column\s+"?([a-zA-Z0-9_]+)"?/gi)].map((match) => match[1]);
 
-  if (isMissingScenario || isMissingDuration) {
-    throw new HttpError(500, schemaMismatchMessage);
+  const knownMissingColumns = requiredEventColumns.filter((column) => {
+    if (columnMatches.includes(column)) {
+      return true;
+    }
+
+    return combinedText.toLowerCase().includes(column);
+  });
+
+  return [...new Set(knownMissingColumns)];
+}
+
+function throwSchemaMismatchIfRequiredColumnsMissing(error: { code?: string | null; message?: string | null; details?: string | null }) {
+  const missingColumns = parseMissingColumnNames(error);
+  if (missingColumns.length > 0) {
+    throw new HttpError(500, `Supabase schema mismatch: missing events column(s): ${missingColumns.join(", ")}`);
   }
 }
 
@@ -34,7 +47,7 @@ function logSupabaseError(route: string, error: { message?: string | null; code?
 export async function listPublicEvents() {
   const { data, error } = await supabase
     .from("events")
-    .select("event_code, event_name, sim_url, scenario_id, duration_minutes, status, starts_at, ends_at, created_at")
+    .select(selectedEventColumns)
     .in("status", ["active", "running"])
     .order("created_at", { ascending: false });
 
@@ -52,7 +65,7 @@ export async function listPublicEvents() {
 export async function listAdminEvents() {
   const { data, error } = await supabase
     .from("events")
-    .select("event_code, event_name, sim_url, scenario_id, duration_minutes, status, starts_at, ends_at, created_at")
+    .select(selectedEventColumns)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -79,7 +92,7 @@ export async function createAdminEvent(input: z.infer<typeof createAdminEventSch
       duration_minutes: payload.duration_minutes,
       status: "active"
     })
-    .select("event_code, event_name, sim_url, scenario_id, duration_minutes, status, starts_at, ends_at, created_at")
+    .select(selectedEventColumns)
     .single();
 
   if (error || !data) {
@@ -135,5 +148,5 @@ export async function updateEventStatus(eventCode: string, action: "start" | "pa
 }
 
 export function getSchemaMismatchMessage() {
-  return schemaMismatchMessage;
+  return "Supabase schema mismatch";
 }
