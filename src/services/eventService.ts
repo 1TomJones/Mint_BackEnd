@@ -11,11 +11,17 @@ const createEventInputSchema = z.object({
   sim_url: z.string().url(),
   scenario_id: z.string().min(1),
   scenario_name: z.string().min(1).optional(),
-  duration_minutes: z.number().int().positive().optional()
+  duration_minutes: z.number().int().min(1).max(180),
+  admin_user_id: z.string().min(1)
 });
 
 export type EventState = z.infer<typeof eventStateSchema>;
 export type CreateEventInput = z.infer<typeof createEventInputSchema>;
+
+function isMissingColumnError(error: { message?: string | null; details?: string | null; code?: string | null }, columnName: string) {
+  const content = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
+  return error.code === "42703" || content.includes(`column ${columnName.toLowerCase()}`) || content.includes(`events.${columnName.toLowerCase()}`);
+}
 
 function throwSchemaMismatchIfScenarioIdMissing(error: { message?: string | null; details?: string | null; code?: string | null }) {
   const content = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
@@ -101,18 +107,42 @@ export async function createEvent(input: CreateEventInput) {
     throw new HttpError(409, "Event code already exists");
   }
 
-  const { data: createdEvent, error: createError } = await supabase
-    .from("events")
-    .insert({
-      ...payload,
-      state: "active"
-    })
-    .select("id, code, name, sim_type, sim_url, scenario_id, scenario_name, duration_minutes, state, started_at, ended_at, created_at")
-    .single();
+  const baseInsertPayload = {
+    code: payload.code,
+    name: payload.name,
+    sim_type: payload.sim_type,
+    sim_url: payload.sim_url,
+    scenario_id: payload.scenario_id,
+    scenario_name: payload.scenario_name,
+    duration_minutes: payload.duration_minutes,
+    state: "active" as const
+  };
+
+  const tryCreate = async (userColumn: "admin_user_id" | "created_by") =>
+    supabase
+      .from("events")
+      .insert({
+        ...baseInsertPayload,
+        [userColumn]: payload.admin_user_id
+      })
+      .select("id, code, name, sim_type, sim_url, scenario_id, scenario_name, duration_minutes, state, started_at, ended_at, created_at")
+      .single();
+
+  let { data: createdEvent, error: createError } = await tryCreate("admin_user_id");
+
+  if (createError && isMissingColumnError(createError, "admin_user_id")) {
+    ({ data: createdEvent, error: createError } = await tryCreate("created_by"));
+  }
 
   if (createError || !createdEvent) {
     if (createError) {
       throwSchemaMismatchIfScenarioIdMissing(createError);
+
+      if (isMissingColumnError(createError, "created_by") || isMissingColumnError(createError, "admin_user_id")) {
+        throw new HttpError(500, "events.created_by/admin_user_id missing", {
+          errorCode: "SCHEMA_MISMATCH"
+        });
+      }
     }
 
     throw new HttpError(500, `Failed to create event: ${createError?.message ?? "unknown error"}`);
