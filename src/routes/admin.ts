@@ -12,10 +12,10 @@ const simAdminLinkSchema = z.object({
 });
 
 const createEventSchema = z.object({
-  event_code: z.string().min(1).regex(/^[A-Z0-9_-]+$/, "event_code must be uppercase"),
-  event_name: z.string().min(1),
-  scenario_id: z.string().min(1),
-  duration_minutes: z.coerce.number().int().positive().optional(),
+  event_code: z.string().trim().toUpperCase().min(1).regex(/^[A-Z0-9_-]+$/, "event_code must be uppercase"),
+  event_name: z.string().trim().min(1),
+  scenario_id: z.string().trim().min(1),
+  duration_minutes: z.coerce.number().int().min(1).max(180),
   sim_url: z.string().url().optional()
 });
 
@@ -52,10 +52,18 @@ adminRouter.post("/events/create", async (req, res, next) => {
       sim_type: "portfolio",
       sim_url: payload.sim_url ?? env.PORTFOLIO_SIM_URL ?? env.SIM_SITE_URL,
       scenario_id: payload.scenario_id,
-      duration_minutes: payload.duration_minutes
+      duration_minutes: payload.duration_minutes,
+      admin_user_id: adminUserId
     });
 
-    return res.status(201).json({ ok: true, event });
+    return res.status(201).json({
+      event_id: event.id,
+      code: event.code,
+      scenario_id: event.scenario_id,
+      duration_minutes: event.duration_minutes,
+      status: event.state,
+      sim_url: event.sim_url
+    });
   } catch (error) {
     return next(error);
   }

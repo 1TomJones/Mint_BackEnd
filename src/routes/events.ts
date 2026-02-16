@@ -19,13 +19,13 @@ const listEventsQuerySchema = z.object({
 });
 
 const createEventSchema = z.object({
-  code: z.string().min(1).regex(/^[A-Z0-9_-]+$/, "code must be uppercase"),
-  name: z.string().min(1),
+  code: z.string().trim().toUpperCase().min(1).regex(/^[A-Z0-9_-]+$/, "code must be uppercase"),
+  name: z.string().trim().min(1),
   sim_type: z.literal("portfolio"),
   sim_url: z.string().url(),
-  scenario_id: z.string().min(1),
-  scenario_name: z.string().min(1).optional(),
-  duration_minutes: z.coerce.number().int().positive().optional()
+  scenario_id: z.string().trim().min(1),
+  scenario_name: z.string().trim().min(1).optional(),
+  duration_minutes: z.coerce.number().int().min(1).max(180)
 });
 
 export const eventsRouter = Router();
@@ -67,7 +67,7 @@ eventsRouter.post("/", async (req, res, next) => {
     const userId = await resolveRequestUserId(req, { allowLegacyHeaderOnly: true });
     await requireAdmin(userId);
     const payload = createEventSchema.parse(req.body);
-    const event = await createEvent(payload);
+    const event = await createEvent({ ...payload, admin_user_id: userId });
     return res.status(201).json({ ok: true, event });
   } catch (error) {
     return next(error);
