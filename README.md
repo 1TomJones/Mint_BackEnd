@@ -82,7 +82,7 @@ npm start
 
 ## Suggested table expectations
 
-- `public.events`: `id`, `code` (unique), `name`, `sim_type`, `sim_url`, `scenario_id`, `state`, `duration_minutes`, `created_at`, `started_at`, `ended_at`
+- `public.events`: `id`, `code` (unique), `name`, `sim_type`, `sim_url`, `scenario_id`, `scenario_name` (optional), `state`, `duration_minutes`, `created_at`, `started_at`, `ended_at`
 - `public.runs`: `id`, `event_id`, `user_id`, `finished_at`
 - `public.run_results`: `run_id`, `score`, `pnl`, `sharpe`, `max_drawdown`, `win_rate`, `extra`
 

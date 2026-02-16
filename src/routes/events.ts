@@ -23,6 +23,7 @@ const createEventSchema = z.object({
   sim_type: z.literal("portfolio"),
   sim_url: z.string().url(),
   scenario_id: z.string().min(1),
+  scenario_name: z.string().min(1).optional(),
   duration_minutes: z.coerce.number().int().positive().optional()
 });
 
