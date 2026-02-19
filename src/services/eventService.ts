@@ -9,10 +9,25 @@ export const createAdminEventSchema = z.object({
   code: z.string().trim().toUpperCase().min(1).regex(/^[A-Z0-9_-]+$/),
   name: z.string().trim().min(1),
   description: z.string().trim().optional(),
-  sim_url: z.string().url(),
-  scenario_id: z.string().trim().min(1),
-  duration_minutes: z.coerce.number().int().positive(),
+  sim_url: z.string().url().optional(),
+  simUrl: z.string().url().optional(),
+  scenario_id: z.string().trim().min(1).optional(),
+  scenarioId: z.string().trim().min(1).optional(),
+  duration_minutes: z.coerce.number().int().positive().optional(),
+  durationMinutes: z.coerce.number().int().positive().optional(),
   status: z.string().trim().optional()
+}).superRefine((input, ctx) => {
+  if (!input.sim_url && !input.simUrl) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "simUrl or sim_url is required", path: ["simUrl"] });
+  }
+
+  if (!input.scenario_id && !input.scenarioId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "scenarioId or scenario_id is required", path: ["scenarioId"] });
+  }
+
+  if (!input.duration_minutes && !input.durationMinutes) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "durationMinutes or duration_minutes is required", path: ["durationMinutes"] });
+  }
 });
 
 function parseMissingColumnNames(error: { code?: string | null; message?: string | null; details?: string | null }) {
@@ -50,7 +65,7 @@ export async function listPublicEvents() {
   const { data, error } = await supabase
     .from("events")
     .select(selectedEventColumns)
-    .in("status", ["active", "running"])
+    .in("status", ["active", "running", "live", "paused"])
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -87,9 +102,9 @@ export async function createAdminEvent(input: z.infer<typeof createAdminEventSch
       code: payload.code,
       name: payload.name,
       description: payload.description,
-      sim_url: payload.sim_url,
-      scenario_id: payload.scenario_id,
-      duration_minutes: payload.duration_minutes,
+      sim_url: payload.sim_url ?? payload.simUrl,
+      scenario_id: payload.scenario_id ?? payload.scenarioId,
+      duration_minutes: payload.duration_minutes ?? payload.durationMinutes,
       status: payload.status ?? "draft"
     })
     .select(selectedEventColumns)
@@ -137,6 +152,25 @@ export async function updateEventStatus(eventCode: string, action: "start" | "pa
 
   if (action === "end") {
     console.log("finalize_scores_hook", { event_code: eventCode, status: "queued_placeholder" });
+  }
+
+  return data;
+}
+
+export async function setEventState(eventCode: string, state: string) {
+  const normalizedState = state.trim().toLowerCase();
+  const { data, error } = await supabase.from("events").update({ status: normalizedState }).eq("code", eventCode).select("code,status,starts_at,ends_at").single();
+
+  if (error || !data) {
+    if (error) {
+      logSupabaseError(`POST /api/admin/events/${eventCode}/state`, error);
+      throwSchemaMismatchIfRequiredColumnsMissing(error);
+      if (error.code === "PGRST116") {
+        throw new HttpError(404, "Event not found");
+      }
+    }
+
+    throw new HttpError(500, `Failed to update event state: ${error?.message ?? "unknown error"}`);
   }
 
   return data;

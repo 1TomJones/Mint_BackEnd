@@ -9,6 +9,7 @@ Minimal TypeScript/Node.js service that bridges Mint frontend and Supabase.
 - `ADMIN_ALLOWLIST_EMAILS` (optional, comma-separated emails)
 - `MINT_SITE_URL`
 - `SIM_SITE_URL`
+- `SIM_ADMIN_TOKEN`
 
 > `SUPABASE_SERVICE_ROLE_KEY` is backend-only. Never expose it to the frontend.
 
@@ -51,6 +52,13 @@ Behavior:
 - `GET /health`
 - `GET /api/admin/me` (canonical)
 - `GET /admin/me` (legacy compatibility alias)
+- `GET /api/admin/events`
+- `POST /api/admin/events`
+- `POST /api/admin/events/:code/state`
+- `GET /api/admin/events/:code/sim-admin-link`
+- `POST /api/admin/sim-admin-link`
+
+`POST /api/admin/events` accepts both camelCase and snake_case keys for the sim/scenario/duration fields.
 
 `GET /api/admin/me` reads `Authorization: Bearer <accessToken>`, resolves the user with Supabase auth, and returns:
 
