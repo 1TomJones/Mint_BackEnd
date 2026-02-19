@@ -30,6 +30,7 @@ runsRouter.post("/create", async (req, res, next) => {
 
 runsRouter.post("/submit", async (req, res, next) => {
   try {
+    await resolveRequestUserId(req);
     const payload = submitRunSchema.parse(req.body);
     const result = await submitRunResult(payload);
     return res.status(200).json(result);
@@ -50,6 +51,7 @@ runsRouter.get("/history", async (req, res, next) => {
 
 runsRouter.get("/:runId", async (req, res, next) => {
   try {
+    await resolveRequestUserId(req);
     const schema = z.object({ runId: z.string().uuid() });
     const { runId } = schema.parse(req.params);
     const runDetail = await getRunDetail(runId);

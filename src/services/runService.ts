@@ -124,20 +124,51 @@ export async function getRunDetail(runId: string) {
 }
 
 export async function getRunsHistory(userId: string) {
-  const { data, error } = await supabase
+  const { data: runs, error: runsError } = await supabase
     .from("runs")
-    .select(
-      "id,created_at,finished_at,event_id,events!runs_event_id_fkey(name,code),run_results(score,pnl,sharpe,max_drawdown)"
-    )
+    .select("id,created_at,finished_at,event_code,status")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    logSupabaseError("GET /api/runs/history", error);
-    throw new HttpError(500, `Failed to fetch runs history: ${error.message}`);
+  if (runsError) {
+    logSupabaseError("GET /api/runs/history runs", runsError);
+    throw new HttpError(500, `Failed to fetch runs history: ${runsError.message}`);
   }
 
+  const runIds = (runs ?? []).map((run) => run.id);
+  const eventCodes = [...new Set((runs ?? []).map((run) => run.event_code).filter(Boolean))];
+
+  const [{ data: results, error: resultsError }, { data: events, error: eventsError }] = await Promise.all([
+    runIds.length > 0
+      ? supabase.from("run_results").select("run_id,score,pnl,sharpe,dd").in("run_id", runIds)
+      : Promise.resolve({ data: [], error: null }),
+    eventCodes.length > 0
+      ? supabase.from("events").select("code,name").in("code", eventCodes)
+      : Promise.resolve({ data: [], error: null })
+  ]);
+
+  if (resultsError) {
+    logSupabaseError("GET /api/runs/history results", resultsError);
+    throw new HttpError(500, `Failed to fetch run results history: ${resultsError.message}`);
+  }
+
+  if (eventsError) {
+    logSupabaseError("GET /api/runs/history events", eventsError);
+    throw new HttpError(500, `Failed to fetch events history: ${eventsError.message}`);
+  }
+
+  const resultsByRunId = new Map((results ?? []).map((result) => [result.run_id, result]));
+  const eventsByCode = new Map((events ?? []).map((event) => [event.code, event]));
+
   return {
-    runs: data ?? []
+    runs: (runs ?? []).map((run) => ({
+      id: run.id,
+      created_at: run.created_at,
+      finished_at: run.finished_at,
+      event_code: run.event_code,
+      status: run.status,
+      event: run.event_code ? eventsByCode.get(run.event_code) ?? null : null,
+      result: resultsByRunId.get(run.id) ?? null
+    }))
   };
 }
