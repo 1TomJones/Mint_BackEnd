@@ -15,7 +15,7 @@ const supabaseServerAuthClient = createClient(env.SUPABASE_URL, env.SUPABASE_SER
   }
 });
 
-function getBearerToken(authHeader: string | undefined) {
+export function getBearerToken(authHeader: string | undefined) {
   if (!authHeader) {
     return undefined;
   }
@@ -26,6 +26,26 @@ function getBearerToken(authHeader: string | undefined) {
   }
 
   return token;
+}
+
+export async function resolveUserFromAccessToken(accessToken: string) {
+  const { data, error } = await supabaseServerAuthClient.auth.getUser(accessToken);
+  if (error || !data.user?.id) {
+    const errorMessage = error?.message?.toLowerCase();
+    const isExpiredToken = Boolean(errorMessage?.includes("expired"));
+
+    throw new HttpError(401, "unauthorized", {
+      details: {
+        reason: isExpiredToken ? "expired_access_token" : "invalid_access_token",
+        supabase_error: error?.message
+      }
+    });
+  }
+
+  return {
+    id: data.user.id,
+    email: data.user.email
+  } satisfies AuthenticatedUser;
 }
 
 export async function resolveRequestUser(req: Request) {
@@ -50,25 +70,18 @@ export async function resolveRequestUser(req: Request) {
     throw new HttpError(401, "unauthorized");
   }
 
-  const { data, error } = await supabaseServerAuthClient.auth.getUser(token);
-  if (error || !data.user?.id) {
-    const errorMessage = error?.message?.toLowerCase();
-    const isExpiredToken = Boolean(errorMessage?.includes("expired"));
-
+  try {
+    return await resolveUserFromAccessToken(token);
+  } catch (error) {
+    const authError = error as HttpError;
     console.warn("admin_auth_rejected", {
       route: req.originalUrl,
       method: req.method,
-      reason: isExpiredToken ? "expired_access_token" : "invalid_access_token",
-      error_message: error?.message
+      reason: authError.details?.reason,
+      error_message: authError.details?.supabase_error
     });
-
-    throw new HttpError(401, isExpiredToken ? "expired" : "unauthorized");
+    throw new HttpError(401, "unauthorized");
   }
-
-  return {
-    id: data.user.id,
-    email: data.user.email
-  } satisfies AuthenticatedUser;
 }
 
 export async function resolveRequestUserId(req: Request) {

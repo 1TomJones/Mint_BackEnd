@@ -3,14 +3,16 @@ import { supabase } from "../lib/supabase";
 import { HttpError } from "../types/errors";
 
 const requiredEventColumns = ["code", "name", "sim_url", "scenario_id", "duration_minutes", "status"] as const;
-const selectedEventColumns = "id,event_code:code,event_name:name,sim_url,scenario_id,duration_minutes,status,starts_at,ends_at,created_at";
+const selectedEventColumns = "id,code,name,description,sim_url,scenario_id,duration_minutes,status,starts_at,ends_at,created_at";
 
 export const createAdminEventSchema = z.object({
-  event_code: z.string().trim().toUpperCase().min(1).regex(/^[A-Z0-9_-]+$/),
-  event_name: z.string().trim().min(1),
+  code: z.string().trim().toUpperCase().min(1).regex(/^[A-Z0-9_-]+$/),
+  name: z.string().trim().min(1),
+  description: z.string().trim().optional(),
   sim_url: z.string().url(),
   scenario_id: z.string().trim().min(1),
-  duration_minutes: z.coerce.number().int().positive()
+  duration_minutes: z.coerce.number().int().positive(),
+  status: z.string().trim().optional()
 });
 
 function parseMissingColumnNames(error: { code?: string | null; message?: string | null; details?: string | null }) {
@@ -63,10 +65,7 @@ export async function listPublicEvents() {
 }
 
 export async function listAdminEvents() {
-  const { data, error } = await supabase
-    .from("events")
-    .select(selectedEventColumns)
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("events").select(selectedEventColumns).order("created_at", { ascending: false });
 
   if (error) {
     logSupabaseError("GET /api/admin/events", error);
@@ -85,19 +84,20 @@ export async function createAdminEvent(input: z.infer<typeof createAdminEventSch
   const { data, error } = await supabase
     .from("events")
     .insert({
-      code: payload.event_code,
-      name: payload.event_name,
+      code: payload.code,
+      name: payload.name,
+      description: payload.description,
       sim_url: payload.sim_url,
       scenario_id: payload.scenario_id,
       duration_minutes: payload.duration_minutes,
-      status: "active"
+      status: payload.status ?? "draft"
     })
     .select(selectedEventColumns)
     .single();
 
   if (error || !data) {
     if (error) {
-      logSupabaseError("POST /api/admin/events", error);
+      logSupabaseError("POST /api/events/create", error);
       throwSchemaMismatchIfRequiredColumnsMissing(error);
     }
 
@@ -121,12 +121,7 @@ export async function updateEventStatus(eventCode: string, action: "start" | "pa
     patch.ends_at = nowIso;
   }
 
-  const { data, error } = await supabase
-    .from("events")
-    .update(patch)
-    .eq("code", eventCode)
-    .select("event_code:code,status,starts_at,ends_at")
-    .single();
+  const { data, error } = await supabase.from("events").update(patch).eq("code", eventCode).select("code,status,starts_at,ends_at").single();
 
   if (error || !data) {
     if (error) {

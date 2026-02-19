@@ -1,56 +1,54 @@
 # Mint Backend (Render + Supabase)
 
-Minimal TypeScript/Node.js service that bridges:
-- Mint website
-- Supabase data
-- External simulation providers
+Minimal TypeScript/Node.js service that bridges Mint frontend and Supabase.
 
-## Features
-
-- `POST /api/runs/create`
-  - Uses `Authorization: Bearer <access_token>` as the required identity source.
-  - Validates event by code.
-  - Creates a run for a user.
-  - Returns a simulation URL with `run_id`, `event_code`, and `scenario_id` query params.
-- `POST /api/runs/submit`
-  - Accepts simulation output.
-  - Validates run exists.
-  - Blocks duplicate submissions.
-  - Only accepts submissions when the event state is `live` or `ended`.
-  - Writes to `run_results` and marks run finished.
-- `GET /api/events/:code/leaderboard`
-  - Returns ranked entries for an event.
-  - Resolves display name from user metadata, falls back to masked email.
-- `GET /api/events/:code/status`
-  - Returns event runtime status fields used by simulation clients.
-- `POST /api/admin/sim-admin-link`
-  - Requires a valid Supabase access token and admin allowlist membership.
-  - Returns signed, short-lived admin URL for `admin.html`.
-- `POST /api/admin/events/create`
-  - Admin-only endpoint for creating events.
-  - Accepts `event_code`, `event_name`, `scenario_id`, `duration_minutes`, and optional `sim_url`.
-  - Stores `scenario_id` on `public.events` and returns `{ ok: true, event: ... }`.
-- `POST /api/admin/events/:code/start|pause|resume|end`
-  - Requires a valid Supabase access token and admin allowlist membership.
-  - Controls event lifecycle state.
-- `GET /api/admin/validate-token`
-  - Verifies admin token integrity and expiration for sim admin page.
-
-## Environment Variables
-
-Set these on Render (and locally in `.env` for development):
+## Required Render environment variables
 
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only secret)
-- `MINT_SITE_URL` (allowed CORS origin for Mint frontend, e.g. `https://mint.example.com`)
-- `SIM_SITE_URL` (allowed CORS origin for simulation frontend, e.g. `https://sim.example.com`)
-- `PORT` (optional, defaults to `3000`)
-- `ADMIN_ALLOWLIST_EMAILS` (optional comma-separated admin emails used for admin endpoint access)
-- `MINT_ADMIN_ORIGIN` (optional extra CORS origin for Mint admin host)
-- `SIM_ORIGIN` (optional extra CORS origin for simulation host)
-- `PORTFOLIO_SIM_URL` (optional fallback sim URL used by admin event creation when `sim_url` is omitted)
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `ADMIN_ALLOWLIST_EMAILS` (optional, comma-separated emails)
+- `MINT_SITE_URL`
+- `SIM_SITE_URL`
 
-> Never expose `SUPABASE_SERVICE_ROLE_KEY` to the frontend.
+> `SUPABASE_SERVICE_ROLE_KEY` is backend-only. Never expose it to the frontend.
+
+## Auth model
+
+Backend request authentication uses **Supabase Auth access tokens only**:
+
+- Clients send `Authorization: Bearer <accessToken>`.
+- Backend validates token with `supabase.auth.getUser(accessToken)`.
+- `x-user-id` is accepted but never trusted as identity source.
+- `ADMIN_JWT_SECRET` is not required for request auth.
+
+## Event creation endpoint
+
+`POST /api/events/create`
+
+Request body:
+
+```json
+{
+  "code": "SPRING_2026",
+  "name": "Spring Challenge",
+  "description": "Optional description",
+  "sim_url": "https://sim.example.com/play",
+  "scenario_id": "scenario-1",
+  "duration_minutes": 60
+}
+```
+
+Behavior:
+
+- 401 `{ "error": "unauthorized", "detail": "..." }` for invalid/missing token.
+- 403 `{ "error": "forbidden", "detail": "email not in allowlist" }` when allowlist is configured and user email is not present.
+- 201 `{ "event": { ...inserted row... } }` on success.
+- Inserts into `public.events` with `status='draft'` by default unless `status` is explicitly provided.
+
+## CORS
+
+Allowed origins are `MINT_SITE_URL` and `SIM_SITE_URL`.
+Allowed headers include `Authorization`, `Content-Type`, and `x-user-id`.
 
 ## Local development
 
@@ -66,39 +64,25 @@ npm run build
 npm start
 ```
 
-## Render deployment
+## Quick test steps
 
-1. Create a **Web Service** pointing to this repository.
-2. Build command:
-   ```bash
-   npm install && npm run build
-   ```
-3. Start command:
-   ```bash
-   npm start
-   ```
-4. Add environment variables:
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `MINT_SITE_URL`
-   - `SIM_SITE_URL`
-   - optionally `PORT`
+1. Get a Supabase user access token from your frontend session.
+2. Create event:
 
-## Suggested table expectations
+```bash
+curl -i -X POST "$BACKEND_URL/api/events/create" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "x-user-id: $USER_ID" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "code":"SPRING_2026",
+    "name":"Spring Challenge",
+    "description":"test",
+    "sim_url":"https://sim.example.com/play",
+    "scenario_id":"scenario-1",
+    "duration_minutes":60
+  }'
+```
 
-- `public.events`: `id`, `code` (unique), `name`, `sim_type`, `sim_url`, `scenario_id`, `scenario_name` (optional), `state`, `duration_minutes`, `created_at`, `started_at`, `ended_at`
-- `public.runs`: `id`, `event_id`, `user_id`, `finished_at`
-- `public.run_results`: `run_id`, `score`, `pnl`, `sharpe`, `max_drawdown`, `win_rate`, `extra`
-
-## Future extensions
-
-Code is split by layers so future work is isolated:
-
-- `routes/` for API endpoints
-- `services/` for business logic
-- `lib/` for integrations
-
-This structure supports adding:
-- submit tokens
-- plan gating
-- rate limiting
+3. Verify `201` and inserted event payload.
+4. If `ADMIN_ALLOWLIST_EMAILS` is set, test with a non-allowlisted account and verify `403`.
