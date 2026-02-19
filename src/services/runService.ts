@@ -55,7 +55,7 @@ export async function createRun(input: z.infer<typeof createRunSchema>) {
     throw new HttpError(500, getSchemaMismatchMessage());
   }
 
-  if (event.status !== "active") {
+  if (!["active", "running"].includes(event.status)) {
     throw new HttpError(409, `Event is not joinable (status: ${event.status})`);
   }
 

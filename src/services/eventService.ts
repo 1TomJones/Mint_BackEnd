@@ -50,7 +50,7 @@ export async function listPublicEvents() {
   const { data, error } = await supabase
     .from("events")
     .select(selectedEventColumns)
-    .eq("status", "active")
+    .in("status", ["active", "running"])
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -62,30 +62,6 @@ export async function listPublicEvents() {
   return {
     events: data ?? []
   };
-}
-
-export async function getJoinableEventByCode(eventCode: string) {
-  const { data, error } = await supabase
-    .from("events")
-    .select(selectedEventColumns)
-    .eq("code", eventCode)
-    .maybeSingle();
-
-  if (error) {
-    logSupabaseError("GET /api/events/by-code/:code", error);
-    throwSchemaMismatchIfRequiredColumnsMissing(error);
-    throw new HttpError(500, `Failed to look up event by code: ${error.message}`);
-  }
-
-  if (!data) {
-    throw new HttpError(404, "Event code not found");
-  }
-
-  if (data.status !== "active") {
-    throw new HttpError(403, `Event is not joinable (status: ${data.status})`);
-  }
-
-  return data;
 }
 
 export async function listAdminEvents() {
@@ -128,67 +104,7 @@ export async function createAdminEvent(input: z.infer<typeof createAdminEventSch
     throw new HttpError(500, `Failed to create event: ${error?.message ?? "unknown error"}`);
   }
 
-  console.log("event_created", { event_id: data.id, event_code: data.code, status: data.status });
-
   return data;
-}
-
-const updateEventStatusSchema = z.enum(["draft", "active", "ended"]);
-
-export async function updateEventStatusById(eventId: string, nextStatus: string) {
-  const status = updateEventStatusSchema.parse(nextStatus);
-
-  const { data: existing, error: existingError } = await supabase
-    .from("events")
-    .select(selectedEventColumns)
-    .eq("id", eventId)
-    .maybeSingle();
-
-  if (existingError) {
-    logSupabaseError("PATCH /api/events/:id/status existing_lookup", existingError);
-    throwSchemaMismatchIfRequiredColumnsMissing(existingError);
-    throw new HttpError(500, `Failed to load event: ${existingError.message}`);
-  }
-
-  if (!existing) {
-    throw new HttpError(404, "Event not found");
-  }
-
-  const patch: Record<string, string> = { status };
-  const nowIso = new Date().toISOString();
-
-  if (status === "active" && !existing.starts_at) {
-    patch.starts_at = nowIso;
-  }
-
-  if (status === "ended" && !existing.ends_at) {
-    patch.ends_at = nowIso;
-  }
-
-  const { data: updated, error: updateError } = await supabase
-    .from("events")
-    .update(patch)
-    .eq("id", eventId)
-    .select(selectedEventColumns)
-    .single();
-
-  if (updateError || !updated) {
-    if (updateError) {
-      logSupabaseError("PATCH /api/events/:id/status update", updateError);
-      throwSchemaMismatchIfRequiredColumnsMissing(updateError);
-    }
-
-    throw new HttpError(500, `Failed to update event status: ${updateError?.message ?? "unknown error"}`);
-  }
-
-  console.log("event_status_changed", {
-    event_id: updated.id,
-    event_code: updated.code,
-    old_status: existing.status,
-    new_status: updated.status
-  });
-
-  return updated;
 }
 
 export async function updateEventStatus(eventCode: string, action: "start" | "pause" | "end") {
