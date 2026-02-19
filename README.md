@@ -21,6 +21,19 @@ Backend request authentication uses **Supabase Auth access tokens only**:
 - `x-user-id` is accepted but never trusted as identity source.
 - `ADMIN_JWT_SECRET` is not required for request auth.
 
+## Health endpoint
+
+- `GET /api/health` returns `200 { "ok": true, "service": "mint-backend" }`.
+
+## Public event endpoints
+
+- `GET /api/events/active` returns currently active events.
+- `GET /api/events/by-code/:code` returns joinable event details for multiplayer join flows.
+
+## Admin identity endpoint
+
+- `GET /api/admin/me` returns `{ userId, email, isAdmin }` for the authenticated user.
+
 ## Event creation endpoint
 
 `POST /api/events/create`
