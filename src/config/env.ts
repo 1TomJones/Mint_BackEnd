@@ -8,7 +8,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   MINT_SITE_URL: z.string().url(),
   SIM_SITE_URL: z.string().url(),
-  SIM_ADMIN_TOKEN: z.string().min(1).optional(),
+  SIM_ADMIN_TOKEN: z.string().min(1),
   MINT_ADMIN_ORIGIN: z.string().url().optional(),
   SIM_ORIGIN: z.string().url().optional(),
   PORTFOLIO_SIM_URL: z.string().url().optional(),

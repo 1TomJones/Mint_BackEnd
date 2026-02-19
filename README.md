@@ -9,7 +9,7 @@ Minimal TypeScript/Node.js service that bridges Mint frontend and Supabase.
 - `ADMIN_ALLOWLIST_EMAILS` (optional, comma-separated emails)
 - `MINT_SITE_URL`
 - `SIM_SITE_URL`
-- `SIM_ADMIN_TOKEN` (required for admin join-link endpoints)
+- `SIM_ADMIN_TOKEN`
 
 > `SUPABASE_SERVICE_ROLE_KEY` is backend-only. Never expose it to the frontend.
 

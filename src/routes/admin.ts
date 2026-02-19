@@ -4,7 +4,6 @@ import { getAdminStatusForUserEmail, requireAdmin } from "../services/adminServi
 import { resolveRequestUser } from "../services/authService";
 import { createAdminEvent, createAdminEventSchema, listAdminEvents, setEventState, updateEventStatus } from "../services/eventService";
 import { env } from "../config/env";
-import { HttpError } from "../types/errors";
 
 export const adminRouter = Router();
 
@@ -25,16 +24,6 @@ const simAdminLinkPostSchema = z
     event_code: z.string().trim().min(1).optional()
   })
   .transform((body) => ({ eventCode: body.eventCode ?? body.event_code ?? "" }));
-
-function buildSimAdminUrl(eventCode: string) {
-  if (!env.SIM_ADMIN_TOKEN) {
-    throw new HttpError(500, "sim_admin_token_not_configured", {
-      details: { reason: "missing_sim_admin_token" }
-    });
-  }
-
-  return `${env.SIM_SITE_URL.replace(/\/$/, "")}/admin?event_code=${encodeURIComponent(eventCode)}&admin_token=${encodeURIComponent(env.SIM_ADMIN_TOKEN)}`;
-}
 
 adminRouter.get("/me", async (req, res, next) => {
   try {
@@ -99,7 +88,7 @@ adminRouter.post("/events/:code/state", requireAdmin, async (req, res, next) => 
 adminRouter.get("/events/:event_code/sim-admin-link", requireAdmin, async (req, res, next) => {
   try {
     const { event_code } = eventCodeParamSchema.parse(req.params);
-    const adminUrl = buildSimAdminUrl(event_code);
+    const adminUrl = `${env.SIM_SITE_URL.replace(/\/$/, "")}/admin?event_code=${encodeURIComponent(event_code)}&admin_token=${encodeURIComponent(env.SIM_ADMIN_TOKEN)}`;
     return res.status(200).json({ adminUrl });
   } catch (error) {
     return next(error);
@@ -109,7 +98,7 @@ adminRouter.get("/events/:event_code/sim-admin-link", requireAdmin, async (req, 
 adminRouter.get("/events/:code/sim-admin-link", requireAdmin, async (req, res, next) => {
   try {
     const { event_code } = eventCodeParamSchema.parse(req.params);
-    const adminUrl = buildSimAdminUrl(event_code);
+    const adminUrl = `${env.SIM_SITE_URL.replace(/\/$/, "")}/admin?event_code=${encodeURIComponent(event_code)}&admin_token=${encodeURIComponent(env.SIM_ADMIN_TOKEN)}`;
     return res.status(200).json({ adminUrl });
   } catch (error) {
     return next(error);
@@ -119,7 +108,7 @@ adminRouter.get("/events/:code/sim-admin-link", requireAdmin, async (req, res, n
 adminRouter.post("/sim-admin-link", requireAdmin, async (req, res, next) => {
   try {
     const { eventCode } = simAdminLinkPostSchema.parse(req.body ?? {});
-    const adminUrl = buildSimAdminUrl(eventCode);
+    const adminUrl = `${env.SIM_SITE_URL.replace(/\/$/, "")}/admin?event_code=${encodeURIComponent(eventCode)}&admin_token=${encodeURIComponent(env.SIM_ADMIN_TOKEN)}`;
     return res.status(200).json({ adminUrl });
   } catch (error) {
     return next(error);

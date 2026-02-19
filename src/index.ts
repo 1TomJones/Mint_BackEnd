@@ -84,8 +84,7 @@ app.listen(env.PORT, () => {
       "POST /api/admin/sim-admin-link",
       "POST /api/runs/create",
       "GET /api/events/public"
-    ],
-    sim_admin_token_configured: Boolean(env.SIM_ADMIN_TOKEN)
+    ]
   });
   console.log("route_mounted", { route: "/api/admin/me" });
   console.log("route_mounted", { route: "/api/admin/events" });
