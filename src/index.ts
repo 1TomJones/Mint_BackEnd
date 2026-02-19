@@ -62,11 +62,34 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 app.listen(env.PORT, () => {
+  if (!env.SIM_ADMIN_TOKEN) {
+    console.warn("startup_config_warning", {
+      key: "SIM_ADMIN_TOKEN",
+      detail: "Admin sim link endpoint will return sim_admin_token_not_configured until this is set"
+    });
+  }
+
   console.log("backend_startup", {
     port: env.PORT,
     version: appVersion,
     commit: process.env.RENDER_GIT_COMMIT ?? null,
-    routes: ["GET /health", "GET /api/admin/me", "GET /admin/me"]
+    routes: [
+      "GET /health",
+      "GET /api/admin/me",
+      "GET /admin/me",
+      "GET /api/admin/events",
+      "POST /api/admin/events",
+      "POST /api/admin/events/:code/state",
+      "GET /api/admin/events/:code/sim-admin-link",
+      "POST /api/admin/sim-admin-link",
+      "POST /api/runs/create",
+      "GET /api/events/public"
+    ],
+    sim_admin_token_configured: Boolean(env.SIM_ADMIN_TOKEN)
   });
   console.log("route_mounted", { route: "/api/admin/me" });
+  console.log("route_mounted", { route: "/api/admin/events" });
+  console.log("route_mounted", { route: "/api/admin/events/:code/state" });
+  console.log("route_mounted", { route: "/api/admin/events/:code/sim-admin-link" });
+  console.log("route_mounted", { route: "/api/admin/sim-admin-link" });
 });

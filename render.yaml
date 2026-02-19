@@ -13,5 +13,9 @@ services:
         sync: false
       - key: MINT_SITE_URL
         sync: false
+      - key: SIM_SITE_URL
+        sync: false
+      - key: SIM_ADMIN_TOKEN
+        sync: false
       - key: NODE_ENV
         value: production
