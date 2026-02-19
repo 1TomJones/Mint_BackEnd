@@ -62,6 +62,13 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 app.listen(env.PORT, () => {
+  if (!env.SIM_ADMIN_TOKEN) {
+    console.warn("startup_config_warning", {
+      key: "SIM_ADMIN_TOKEN",
+      detail: "Admin sim link endpoint will return sim_admin_token_not_configured until this is set"
+    });
+  }
+
   console.log("backend_startup", {
     port: env.PORT,
     version: appVersion,
