@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { createAdminEvent, listPublicEvents } from "../services/eventService";
-import { getBearerToken, resolveUserFromAccessToken } from "../services/authService";
-import { env } from "../config/env";
+import { requireAdmin } from "../services/adminService";
 
 export const eventsRouter = Router();
 
@@ -16,13 +15,6 @@ const createEventSchema = z.object({
   status: z.string().trim().optional()
 });
 
-const adminEmailAllowlist = new Set(
-  (env.ADMIN_ALLOWLIST_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
-);
-
 eventsRouter.get("/public", async (_req, res, next) => {
   try {
     const result = await listPublicEvents();
@@ -32,58 +24,17 @@ eventsRouter.get("/public", async (_req, res, next) => {
   }
 });
 
-eventsRouter.post("/create", async (req, res) => {
+eventsRouter.post("/create", requireAdmin, async (req, res) => {
   const requestId = req.requestId;
   const headerUserId = Array.isArray(req.headers["x-user-id"]) ? req.headers["x-user-id"][0] : req.headers["x-user-id"];
-
-  let accessToken: string | undefined;
-  try {
-    accessToken = getBearerToken(req.headers.authorization);
-  } catch (_error) {
-    console.warn("event_create_auth", { request_id: requestId, decision: "forbidden", reason: "invalid_auth_header" });
-    return res.status(401).json({ error: "unauthorized", detail: "invalid authorization header" });
-  }
-
-  if (!accessToken) {
-    console.warn("event_create_auth", { request_id: requestId, decision: "forbidden", reason: "missing_auth_header" });
-    return res.status(401).json({ error: "unauthorized", detail: "missing authorization header" });
-  }
-
-  let user;
-  try {
-    user = await resolveUserFromAccessToken(accessToken);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "invalid access token";
-    console.warn("event_create_auth", {
-      request_id: requestId,
-      decision: "forbidden",
-      reason: "invalid_access_token",
-      header_user_id: headerUserId,
-      detail: message
-    });
-    return res.status(401).json({ error: "unauthorized", detail: message });
-  }
-
-  const email = user.email?.trim().toLowerCase();
-  if (adminEmailAllowlist.size > 0 && (!email || !adminEmailAllowlist.has(email))) {
-    console.warn("event_create_auth", {
-      request_id: requestId,
-      user_id: user.id,
-      user_email: email,
-      header_user_id: headerUserId,
-      decision: "forbidden",
-      reason: "email_not_in_allowlist"
-    });
-    return res.status(403).json({ error: "forbidden", detail: "email not in allowlist" });
-  }
 
   try {
     const payload = createEventSchema.parse(req.body);
     const event = await createAdminEvent(payload);
     console.log("event_create_db", {
       request_id: requestId,
-      user_id: user.id,
-      user_email: email,
+      user_id: req.adminUserId,
+      user_email: req.adminUserEmail,
       header_user_id: headerUserId,
       decision: "allowed",
       insert_result: "success",
@@ -94,8 +45,8 @@ eventsRouter.post("/create", async (req, res) => {
   } catch (error) {
     console.error("event_create_db", {
       request_id: requestId,
-      user_id: user.id,
-      user_email: email,
+      user_id: req.adminUserId,
+      user_email: req.adminUserEmail,
       header_user_id: headerUserId,
       decision: "allowed",
       insert_result: "error",

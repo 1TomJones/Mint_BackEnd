@@ -12,8 +12,7 @@ const envSchema = z.object({
   SIM_ORIGIN: z.string().url().optional(),
   PORTFOLIO_SIM_URL: z.string().url().optional(),
   SUPABASE_URL: z.string().url(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  ADMIN_ALLOWLIST_EMAILS: z.string().optional()
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1)
 });
 
 const parsed = envSchema.safeParse(process.env);
