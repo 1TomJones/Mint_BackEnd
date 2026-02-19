@@ -1,12 +1,31 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAdmin } from "../services/adminService";
+import { getAdminStatusForUserEmail, requireAdmin } from "../services/adminService";
+import { resolveRequestUser } from "../services/authService";
 import { createAdminEvent, createAdminEventSchema, listAdminEvents, updateEventStatus } from "../services/eventService";
 
 export const adminRouter = Router();
 
 const eventCodeParamSchema = z.object({
   event_code: z.string().trim().min(1)
+});
+
+adminRouter.get("/me", async (req, res, next) => {
+  try {
+    const user = await resolveRequestUser(req);
+    const result = await getAdminStatusForUserEmail(user.email);
+
+    console.log("admin_me_check", {
+      route: req.originalUrl,
+      method: req.method,
+      email: user.email,
+      is_admin: result.isAdmin
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
 });
 
 adminRouter.get("/events", requireAdmin, async (req, res, next) => {

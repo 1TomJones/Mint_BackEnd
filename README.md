@@ -45,6 +45,36 @@ Behavior:
 - 201 `{ "event": { ...inserted row... } }` on success.
 - Inserts into `public.events` with `status='draft'` by default unless `status` is explicitly provided.
 
+
+## Admin auth routes
+
+- `GET /health`
+- `GET /api/admin/me` (canonical)
+- `GET /admin/me` (legacy compatibility alias)
+
+`GET /api/admin/me` reads `Authorization: Bearer <accessToken>`, resolves the user with Supabase auth, and returns:
+
+```json
+{ "isAdmin": true, "detail": null }
+```
+
+or
+
+```json
+{ "isAdmin": false, "detail": "email not in admin_allowlist" }
+```
+
+## Render deployment checklist
+
+For the deployed backend service, verify:
+
+- **Root Directory**: `backend-render` in the parent mono-repo (or this repository root if deploying this repo directly).
+- **Start Command**: `npm start`
+- **Build Command**: `npm install && npm run build`
+- **Environment Variables**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `MINT_SITE_URL`, `SIM_SITE_URL`
+
+On startup the service now logs version/commit and mounted admin route details to confirm the correct build is running.
+
 ## CORS
 
 Allowed origins are `MINT_SITE_URL` and `SIM_SITE_URL`.

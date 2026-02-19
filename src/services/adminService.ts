@@ -30,6 +30,24 @@ async function isAdminAllowlisted(email: string) {
   return Boolean(data?.email);
 }
 
+export async function getAdminStatusForUserEmail(email: string | undefined) {
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!normalizedEmail) {
+    return {
+      isAdmin: false,
+      detail: "email not in admin_allowlist"
+    };
+  }
+
+  const isAllowlisted = await isAdminAllowlisted(normalizedEmail);
+
+  return {
+    isAdmin: isAllowlisted,
+    detail: isAllowlisted ? null : "email not in admin_allowlist"
+  };
+}
+
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   let user;
   try {
@@ -56,14 +74,14 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
     });
   }
 
-  let isAllowlisted = false;
+  let adminStatus;
   try {
-    isAllowlisted = await isAdminAllowlisted(email);
+    adminStatus = await getAdminStatusForUserEmail(email);
   } catch (error) {
     return next(error);
   }
 
-  if (!isAllowlisted) {
+  if (!adminStatus.isAdmin) {
     console.warn("admin_authorization", {
       route: req.originalUrl,
       method: req.method,

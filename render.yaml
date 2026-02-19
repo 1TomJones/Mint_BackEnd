@@ -3,6 +3,7 @@ services:
     name: mint-backend
     runtime: node
     plan: starter
+    rootDir: backend-render
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
