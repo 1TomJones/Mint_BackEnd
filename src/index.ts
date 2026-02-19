@@ -66,7 +66,22 @@ app.listen(env.PORT, () => {
     port: env.PORT,
     version: appVersion,
     commit: process.env.RENDER_GIT_COMMIT ?? null,
-    routes: ["GET /health", "GET /api/admin/me", "GET /admin/me"]
+    routes: [
+      "GET /health",
+      "GET /api/admin/me",
+      "GET /admin/me",
+      "GET /api/admin/events",
+      "POST /api/admin/events",
+      "POST /api/admin/events/:code/state",
+      "GET /api/admin/events/:code/sim-admin-link",
+      "POST /api/admin/sim-admin-link",
+      "POST /api/runs/create",
+      "GET /api/events/public"
+    ]
   });
   console.log("route_mounted", { route: "/api/admin/me" });
+  console.log("route_mounted", { route: "/api/admin/events" });
+  console.log("route_mounted", { route: "/api/admin/events/:code/state" });
+  console.log("route_mounted", { route: "/api/admin/events/:code/sim-admin-link" });
+  console.log("route_mounted", { route: "/api/admin/sim-admin-link" });
 });
