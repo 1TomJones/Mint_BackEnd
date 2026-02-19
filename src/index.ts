@@ -51,11 +51,6 @@ app.get("/health", (_req, res) => {
 });
 
 const apiRouter = express.Router();
-
-apiRouter.get("/health", (_req, res) => {
-  res.status(200).json({ ok: true, service: "mint-backend" });
-});
-
 apiRouter.use("/events", eventsRouter);
 apiRouter.use("/runs", runsRouter);
 apiRouter.use("/admin", adminRouter);
