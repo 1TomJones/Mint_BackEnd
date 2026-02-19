@@ -30,24 +30,6 @@ async function isAdminAllowlisted(email: string) {
   return Boolean(data?.email);
 }
 
-export async function getAdminStatusForEmail(email: string | undefined) {
-  const normalizedEmail = normalizeEmail(email);
-
-  if (!normalizedEmail) {
-    return {
-      email: "",
-      isAdmin: false
-    };
-  }
-
-  const isAdmin = await isAdminAllowlisted(normalizedEmail);
-
-  return {
-    email: normalizedEmail,
-    isAdmin
-  };
-}
-
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   let user;
   try {
