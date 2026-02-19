@@ -27,9 +27,19 @@ const eventCodeParamSchema = z.object({
   code: z.string().trim().min(1)
 });
 
+
 eventsRouter.get("/", requireAdmin, async (_req, res, next) => {
   try {
     const result = await listAdminEvents();
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+eventsRouter.get("/active", async (_req, res, next) => {
+  try {
+    const result = await listPublicEvents();
     return res.status(200).json(result);
   } catch (error) {
     return next(error);
