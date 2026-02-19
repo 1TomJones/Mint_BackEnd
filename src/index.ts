@@ -11,6 +11,7 @@ const app = express();
 const corsAllowedOrigins = new Set([env.MINT_SITE_URL, env.SIM_SITE_URL]);
 const corsAllowedMethods = "GET, POST, OPTIONS";
 const corsAllowedHeaders = "Authorization, Content-Type, x-user-id";
+const appVersion = process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? process.env.npm_package_version ?? "unknown";
 
 app.use((req, res, next) => {
   const startedAt = Date.now();
@@ -55,10 +56,17 @@ apiRouter.use("/events", eventsRouter);
 apiRouter.use("/runs", runsRouter);
 apiRouter.use("/admin", adminRouter);
 app.use("/api", apiRouter);
+app.use("/admin", adminRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
 
 app.listen(env.PORT, () => {
-  console.log(`Mint backend listening on port ${env.PORT}`);
+  console.log("backend_startup", {
+    port: env.PORT,
+    version: appVersion,
+    commit: process.env.RENDER_GIT_COMMIT ?? null,
+    routes: ["GET /health", "GET /api/admin/me", "GET /admin/me"]
+  });
+  console.log("route_mounted", { route: "/api/admin/me" });
 });
